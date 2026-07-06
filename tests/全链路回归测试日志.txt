@@ -1,0 +1,27 @@
+=== 全链路回归测试 2026-07-06 22:05 ===
+--- 1. 市场日报 ---
+① 拉取市场数据……
+② 执行市场分析（严格对照 config 铁则）……
+③ 渲染并归档报告……
+✅ 市场日报已生成：E:\oneDrive\investment-workbench\investment-workbench\output\daily_market\市场日报_20260706.md
+   情绪观察分：4.5/10 ｜ 市场状态：未判定（请周日人工判定后 python run.py set-state <状态>）
+   [P2] 市场状态无人工判定记录，仓位上限约束无法生效核对——请按§1.3周日流程补判
+   [P3] 当日跌停 46 家，情绪偏弱，注意§3.5异常预案（大盘单日跌幅>5%不恐慌卖出）
+--- 2. 个股分析(002594 比亚迪) ---
+① 拉取个股数据（002594）……
+② 对照选股/估值/风控规则逐项判定……
+③ 渲染并归档报告……
+✅ 个股报告已生成：E:\oneDrive\investment-workbench\investment-workbench\output\stock_reports\个股_002594_比亚迪_20260706.md
+   结论：股息组合：排除（存在门槛FAIL项） ｜ 择时组合：不满足择时买入条件（存在FAIL项）
+   待人工核验项：11 条（详见报告第八节）
+--- 3. 月度迭代 ---
+✅ 月度迭代报告已生成：E:\oneDrive\investment-workbench\investment-workbench\output\iteration\月度体系迭代报告_2026-07.md
+   ⚠️ 所有修订仅为草案，不会修改 config/；确认后请手动修改并先执行 backup-config
+--- 4. 季度迭代 ---
+✅ 季度深度复盘报告已生成：E:\oneDrive\investment-workbench\investment-workbench\output\iteration\季度体系深度复盘报告_2026-Q3.md
+   ⚠️ 所有修订仅为草案，不会修改 config/
+--- 5. 单元测试 ---
+............................................................             [100%]
+60 passed in 1.36s
+--- 6. 配置备份/回滚 ---
+✅ 配置已备份：config/history/v001_20260706_220737/

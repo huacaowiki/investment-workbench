@@ -1,0 +1,42 @@
+# ===== 数据缓存（可再生，不入库）=====
+data/raw/
+data/processed/
+!data/raw/sample/
+!data/raw/sample/**
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# ===== 密钥与环境变量 =====
+.env
+.env.*
+*.key
+
+# ===== 临时文件与日志 =====
+*.log
+*.tmp
+*.temp
+~$*
+logs/
+
+# ===== 系统缓存文件 =====
+Thumbs.db
+Desktop.ini
+.DS_Store
+$RECYCLE.BIN/
+
+# ===== OneDrive 同步冲突文件 =====
+*-DESKTOP-*.md
+*-conflict*
+
+# ===== 大文件（>10MB 的常见二进制，如需入库请用 Git LFS）=====
+*.zip
+*.rar
+*.7z
+*.mp4
+*.mov

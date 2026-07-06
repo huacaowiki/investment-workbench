@@ -1,0 +1,15 @@
+{
+  "versions": [
+    {
+      "version_id": "v001_20260706_220737",
+      "date": "2026-07-06 22:07:37",
+      "note": "回归测试备份",
+      "files": [
+        "investment_system.yaml",
+        "stock_selection.yaml",
+        "valuation_model.yaml",
+        "risk_control.yaml"
+      ]
+    }
+  ]
+}

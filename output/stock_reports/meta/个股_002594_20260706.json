@@ -1,0 +1,20 @@
+{
+  "type": "stock_report",
+  "code": "002594",
+  "name": "比亚迪",
+  "date": "20260706",
+  "generated_at": "2026-07-06T22:06:30.796335",
+  "close": 87.54,
+  "pe_ttm": 28.97,
+  "pe_pct": 0.27906976744186046,
+  "pb": 3.44,
+  "dividend_yield": null,
+  "zone": "减持区（触发估值卖出条件）",
+  "overall": "股息组合：排除（存在门槛FAIL项） ｜ 择时组合：不满足择时买入条件（存在FAIL项）",
+  "timing_auto_score_floor": 0,
+  "manual_item_count": 11,
+  "data_errors": [
+    "peers",
+    "institution_forecast"
+  ]
+}

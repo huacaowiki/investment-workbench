@@ -1,0 +1,19 @@
+{
+  "type": "stock_report",
+  "code": "600519",
+  "name": "贵州茅台",
+  "date": "20260706",
+  "generated_at": "2026-07-06T21:59:03.097673",
+  "close": 1206.91,
+  "pe_ttm": 18.24,
+  "pe_pct": 0.004103967168262654,
+  "pb": 5.57,
+  "dividend_yield": null,
+  "zone": "持有区（未满足买入标准，亦未触发估值卖出条件）",
+  "overall": "股息组合：排除（存在门槛FAIL项） ｜ 择时组合：不满足择时买入条件（存在FAIL项）",
+  "timing_auto_score_floor": 0,
+  "manual_item_count": 11,
+  "data_errors": [
+    "institution_forecast"
+  ]
+}
