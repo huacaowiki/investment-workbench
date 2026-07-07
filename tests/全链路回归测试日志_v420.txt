@@ -1,0 +1,21 @@
+=== v4.2.0 全链路回归（最终） 2026-07-07 09:58 ===
+--- 单元测试 ---
+73 passed in 1.40s
+--- judge-state（程序初判）---
+初判结果：B偏高（A区命中1条/C区命中1条（均<3），按股债利差 3.42% 落入B区细分带）
+✅ 已落盘 data/processed/market_state.json（source=auto）；人工 set-state 可随时覆盖
+--- watchlist ---
+备选池共 1 只（§2.3要求30-50只，覆盖≥5行业）：
+  002594  比亚迪  入池 2026-07-07
+--- config校验 ---
+4/4 YAML valid, v4.2.0
+--- 数据完整性 ---
+Traceback (most recent call last):
+  File "<string>", line 4, in <module>
+    s = json.load(open('data/processed/market_state.json'))
+  File "C:\Users\cuiji\AppData\Local\Programs\Python\Python314\Lib\json\__init__.py", line 298, in load
+    return loads(fp.read(),
+                 ~~~~~~~^^
+UnicodeDecodeError: 'gbk' codec can't decode byte 0xad in position 92: illegal multibyte sequence
+turnover_history: [('20260706', '30911亿')]
+market_state: B_high / auto / 2026-07-07

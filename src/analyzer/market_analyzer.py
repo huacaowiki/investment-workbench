@@ -11,6 +11,8 @@ market_analyzer.py — 市场日报分析引擎
 """
 from __future__ import annotations
 
+from datetime import datetime
+
 from src.data.data_utils import fmt_pct, fmt_yi, safe_get, to_float
 from src.utils.file_utils import DIRS, load_config, read_json
 
@@ -18,6 +20,8 @@ from src.utils.file_utils import DIRS, load_config, read_json
 MARKET_STATE_FILE = DIRS["data_processed"] / "market_state.json"
 
 STATE_KEYS = ["A_undervalued", "B_low", "B_neutral", "B_high", "C_overvalued"]
+STATE_NAMES_CN = {"A_undervalued": "A区·低估", "B_low": "B偏低", "B_neutral": "B中性",
+                  "B_high": "B偏高", "C_overvalued": "C区·高估"}
 
 
 def _index_summary(snapshot: dict) -> list[dict]:
@@ -92,50 +96,152 @@ def _sentiment(snapshot: dict) -> dict:
 
 def check_market_state(snapshot: dict, config: dict) -> dict:
     """
-    §1.3 市场状态条件逐条核对。
-    返回：{"conditions": [...], "auto_verdict": ..., "manual_state": ..., "effective_state": ...}
-    - 程序可判定：上证点位、成交额（当日）、沪深300波动率（严格模式条件）
-    - 待人工：股债利差、破净率、Wind全A PE、政策表述、恐惧贪婪等
-    - effective_state 优先取用户每周人工判定（data/processed/market_state.json），
-      无记录时为 None（报告提示按§1.3流程周日判定），绝不由程序拍板。
+    §1.3 市场状态条件逐条核对 + 程序初判（v4.2.0 auto_judgment）。
+    量化条件（automated: true）自动判定；定性条件（政策/开户数/日光基/破净率）
+    不参与判定，仅在报告中列示为参考。
+    判定逻辑（investment_system.yaml v4.2.0 裁决）：
+      A区/C区：各自可判定条件满足≥3条 → 进入该区；
+      否则按股债利差落入B区细分带（利差 = 1/中证全指PE - 10年国债收益率）。
+    生效状态：人工 set-state（7日内有效）优先于程序初判。
     """
-    framework = safe_get(config, "investment_system", "market_state_framework") or {}
     sh_close = next((to_float(r.get("最新价")) for r in (snapshot.get("index_spot") or [])
                      if r.get("名称") == "上证指数"), None)
     turnover = _total_turnover(snapshot)
+    history = snapshot.get("turnover_history") or []
+    cs_pe = safe_get(snapshot, "csindex_pe", "市盈率1")
+    cn10y = snapshot.get("cn10y_yield")
+    sh_high = safe_get(snapshot, "sh_index_high", "历史最高收盘")
+
+    spread = (1 / cs_pe - cn10y) if (cs_pe and cn10y is not None) else None
 
     checks = []
-    # A区条件① 上证跌破3000
-    checks.append({"区": "A区", "条件": "上证跌破3000点或市净率历史5%分位以下",
-                   "程序判定": (sh_close < 3000) if sh_close else None,
-                   "当前值": f"上证收盘 {sh_close}" if sh_close else "数据缺失"})
-    # A区条件⑤ 成交额（程序只有当日值，10日连续性待人工）
-    checks.append({"区": "A区", "条件": "日成交额连续10日<7000亿且换手率<1.5%",
-                   "程序判定": None,
-                   "当前值": f"当日两市成交额约 {fmt_yi(turnover)}（连续10日口径需人工跟踪）" if turnover else "数据缺失"})
-    # C区条件② 成交持续>1.5万亿
-    checks.append({"区": "C区", "条件": "日成交持续>1.5万亿（恐惧贪婪极度贪婪）",
-                   "程序判定": None,
-                   "当前值": f"当日两市成交额约 {fmt_yi(turnover)}（持续性与情绪指数需人工确认）" if turnover else "数据缺失"})
-    # 其余条件：股债利差/破净率/PE/开户数/日光基/政策表述 → 待人工
-    for zone, cond in [("A区", "Wind全A非金融石化PE<22倍"), ("A区", "股债利差>5%"),
-                       ("A区", "全市场破净率>10%"), ("A区", "官方明确'提振资本市场'表述"),
-                       ("C区", "上证逼近或突破历史高点"), ("C区", "新股民开户数同比历史高位"),
-                       ("C区", "偏股基金出现日光基"), ("C区", "官方提示金融市场风险"),
-                       ("C区", "股债利差<2%")]:
-        checks.append({"区": zone, "条件": cond, "程序判定": None, "当前值": "【待人工确认】"})
 
-    manual = read_json(MARKET_STATE_FILE)   # 用户每周日判定后写入
-    manual_state = (manual or {}).get("state")
-    manual_date = (manual or {}).get("date")
+    def add(zone, cond, verdict, value, note=""):
+        checks.append({"区": zone, "条件": cond, "程序判定": verdict,
+                       "当前值": value + (f"｜{note}" if note else "")})
+
+    # ---- A区可判定条件 ----
+    a_hits = 0
+    v = (sh_close < 3000) if sh_close else None
+    a_hits += 1 if v else 0
+    add("A区", "上证跌破3000点（或PB历史5%分位以下）", v,
+        f"上证收盘 {sh_close}" if sh_close else "数据缺失",
+        "PB分位半边无公开数据源，按点位半边判定")
+    v = (cs_pe < 22) if cs_pe else None
+    a_hits += 1 if v else 0
+    add("A区", "全A PE<22倍", v, f"中证全指PE1 = {cs_pe}" if cs_pe else "数据缺失",
+        "替代口径：中证全指（含金融石化，偏保守）")
+    v = (spread > 0.05) if spread is not None else None
+    a_hits += 1 if v else 0
+    add("A区", "股债利差>5%", v,
+        f"利差 {fmt_pct(spread)}（1/PE {fmt_pct(1/cs_pe) if cs_pe else '—'} − 国债 {fmt_pct(cn10y)}）"
+        if spread is not None else "数据缺失")
+    recent10 = [h["turnover"] for h in history[-10:] if h.get("turnover")]
+    if len(recent10) >= 10:
+        v = all(t < 7e11 for t in recent10)
+        low_note = "自建序列样本充足"
+    elif recent10:
+        v = all(t < 7e11 for t in recent10)
+        low_note = f"自建序列仅{len(recent10)}日样本（<10日），判定随样本累积收敛"
+    else:
+        v, low_note = None, "无成交额历史样本"
+    a_hits += 1 if v else 0
+    add("A区", "日成交额连续10日<7000亿", v,
+        f"近{len(recent10)}日成交额 {['%.0f亿' % (t/1e8) for t in recent10[-3:]]}…" if recent10 else "数据缺失",
+        low_note + "；换手率半边无公开序列，按成交额半边判定")
+    add("A区", "全市场破净率>10%", None, "不参与自动判定", "无可编程公开数据源（v4.2.0核实）")
+    add("A区", "官方'提振资本市场'表述", None, "不参与自动判定", "定性条件（裁决#3）")
+
+    # ---- C区可判定条件 ----
+    c_hits = 0
+    v = (sh_close >= sh_high * 0.95) if (sh_close and sh_high) else None
+    c_hits += 1 if v else 0
+    add("C区", "上证逼近/突破历史高点（≥历史最高×95%）", v,
+        f"收盘 {sh_close} vs 历史最高 {sh_high}" if (sh_close and sh_high) else "数据缺失")
+    recent5 = [h["turnover"] for h in history[-5:] if h.get("turnover")]
+    v = (len(recent5) >= 5 and all(t > 1.5e12 for t in recent5)) if recent5 else None
+    if recent5 and len(recent5) < 5:
+        v = all(t > 1.5e12 for t in recent5)
+    c_hits += 1 if v else 0
+    add("C区", "日成交额连续5日>1.5万亿", v,
+        f"近{len(recent5)}日样本" if recent5 else "数据缺失",
+        "恐惧贪婪指数无可编程源，取原文并列可测部分（裁决#2）")
+    v = (spread < 0.02) if spread is not None else None
+    c_hits += 1 if v else 0
+    add("C区", "股债利差<2%", v, f"利差 {fmt_pct(spread)}" if spread is not None else "数据缺失")
+    add("C区", "新股民开户数同比历史高位", None, "不参与自动判定", "无可编程公开数据源")
+    add("C区", "偏股基金日光基", None, "不参与自动判定", "定性条件")
+    add("C区", "官方提示金融市场风险", None, "不参与自动判定", "定性条件（裁决#3）")
+
+    # ---- 程序初判 ----
+    if a_hits >= 3:
+        auto_state, basis = "A_undervalued", f"A区可判定条件命中{a_hits}条（≥3）"
+    elif c_hits >= 3:
+        auto_state, basis = "C_overvalued", f"C区可判定条件命中{c_hits}条（≥3）"
+    elif spread is not None:
+        if spread >= 0.045:
+            auto_state = "B_low"
+        elif spread >= 0.035:
+            auto_state = "B_neutral"
+        else:
+            auto_state = "B_high"   # 利差<3%时亦落此档（偏保守），C区另由≥3条判定
+        basis = (f"A区命中{a_hits}条/C区命中{c_hits}条（均<3），按股债利差 {fmt_pct(spread)} 落入B区细分带")
+    else:
+        auto_state, basis = None, "股债利差数据缺失，无法初判"
+
+    # ---- 生效状态：人工判定（7日内）优先 ----
+    saved = read_json(MARKET_STATE_FILE) or {}
+    manual_state = saved.get("state") if saved.get("source") == "manual" else None
+    manual_date = saved.get("date")
+    if manual_state and manual_date:
+        try:
+            age = (datetime.now() - datetime.strptime(manual_date, "%Y-%m-%d")).days
+            if age > 7:   # §1.3：每周更新；过期的人工判定降级为参考
+                manual_state = None
+        except ValueError:
+            pass
+    effective = manual_state or auto_state
     return {
         "conditions": checks,
+        "a_hits": a_hits, "c_hits": c_hits,
+        "equity_bond_spread": spread,
+        "auto_state": auto_state,
+        "auto_basis": basis,
         "manual_state": manual_state,
-        "manual_state_date": manual_date,
-        "effective_state": manual_state,   # 程序绝不自行拍板市场状态
-        "note": ("当前生效状态为用户人工判定" if manual_state
-                 else "尚无人工判定记录：请按§1.3于每周日核对条件后，将结果写入 data/processed/market_state.json（格式见使用手册）"),
+        "manual_state_date": manual_date if manual_state else None,
+        "effective_state": effective,
+        "note": (f"生效状态来源：人工判定（{manual_date}，7日内有效，优先于程序初判）" if manual_state
+                 else f"生效状态来源：程序初判（{basis}）；人工 set-state 可覆盖"),
     }
+
+
+def judge_and_record_state(snapshot: dict | None = None, config: dict | None = None) -> dict:
+    """
+    执行市场状态程序初判并落盘（run.py judge-state 入口）。
+    不覆盖7日内的人工判定；写入 source=auto 记录。
+    """
+    from src.data.market_data import get_market_snapshot
+    from src.utils.file_utils import write_json
+    config = config or load_config()
+    snapshot = snapshot or get_market_snapshot()
+    result = check_market_state(snapshot, config)
+    if result["manual_state"]:
+        result["recorded"] = False
+        result["record_note"] = "存在7日内人工判定，程序初判仅供参考，未落盘覆盖"
+        return result
+    if result["auto_state"]:
+        write_json(MARKET_STATE_FILE, {
+            "state": result["auto_state"],
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "source": "auto",
+            "basis": result["auto_basis"],
+            "note": "程序初判（v4.2.0 auto_judgment）；人工 set-state 优先",
+        })
+        result["recorded"] = True
+    else:
+        result["recorded"] = False
+        result["record_note"] = "数据不足未落盘"
+    return result
 
 
 def _position_constraints(state_check: dict, config: dict) -> dict:
@@ -155,17 +261,23 @@ def _risk_alerts(snapshot: dict, state_check: dict, sentiment: dict) -> list[dic
     只报告体系内规则相关的风险，不做主观行情预测。
     """
     alerts = []
-    vol = safe_get(snapshot, "hs300_volatility", "近20日年化波动率")
+    vol = safe_get(snapshot, "volatility_gauge", "数值")
+    vol_name = safe_get(snapshot, "volatility_gauge", "指标") or "波动率"
+    vol_note = safe_get(snapshot, "volatility_gauge", "口径") or ""
     if vol is not None and vol > 0.35:
         alerts.append({"级别": "P1", "内容":
-                       f"沪深300近20日年化波动率 {fmt_pct(vol)} > 35%，触发择时组合严格风控模式"
-                       f"（§1.5：仓位上限30%、单票15%、不开新仓）。口径：历史波动率近似，非官方VIX（待确认#2）"})
+                       f"{vol_name} {fmt_pct(vol)} > 35%，触发择时组合严格风控模式"
+                       f"（§1.5：仓位上限30%、单票15%、不开新仓）。{vol_note}"})
     elif vol is not None and vol > 0.30:
         alerts.append({"级别": "P2", "内容":
-                       f"沪深300近20日年化波动率 {fmt_pct(vol)} 接近35%严格风控触发线，需观察"})
+                       f"{vol_name} {fmt_pct(vol)} 接近35%严格风控触发线，需观察"})
     if state_check.get("effective_state") is None:
         alerts.append({"级别": "P2", "内容":
-                       "市场状态无人工判定记录，仓位上限约束无法生效核对——请按§1.3周日流程补判"})
+                       "市场状态无法判定（数据缺失且无人工记录）——请运行 judge-state 或人工 set-state"})
+    elif state_check.get("effective_state") == "C_overvalued":
+        alerts.append({"级别": "P1", "内容":
+                       f"市场状态为C区·高估（{state_check.get('note')}）：择时只卖不买降至20%以下；"
+                       "股息暂停买入并逐票执行估值卖出检查（v4.2.0裁决#10）"})
     dt = sentiment.get("跌停家数")
     if dt is not None and dt > 30:
         alerts.append({"级别": "P3", "内容": f"当日跌停 {int(dt)} 家，情绪偏弱，注意§3.5异常预案（大盘单日跌幅>5%不恐慌卖出）"})
@@ -194,9 +306,10 @@ def analyze_market(snapshot: dict, config: dict | None = None) -> dict:
         "state_check": state_check,
         "position": _position_constraints(state_check, config),
         "alerts": _risk_alerts(snapshot, state_check, sentiment),
-        "capital_flow": {"hsgt": snapshot.get("hsgt_flow") or [],
+        "capital_flow": {"margin": snapshot.get("margin_summary") or {},
                          "lhb": (snapshot.get("lhb") or [])[:10]},
-        "volatility": snapshot.get("hs300_volatility"),
+        "volatility": snapshot.get("volatility_gauge"),
+        "csindex_pe": snapshot.get("csindex_pe"),
         "cn10y_yield": snapshot.get("cn10y_yield"),
         "errors": snapshot.get("errors") or {},
     }

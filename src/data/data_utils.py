@@ -121,6 +121,109 @@ def avg(values: list) -> float | None:
 
 
 # =============================================================================
+# 技术指标（v4.2.0 自动化口径：技术底部/右侧确认/放量滞涨的量化实现）
+# =============================================================================
+
+def rsi_series(closes: list, period: int = 14) -> list:
+    """Wilder RSI 序列（长度与输入对齐，前 period 位为 None）。"""
+    c = [to_float(x) for x in closes]
+    if len([x for x in c if x is not None]) < period + 1:
+        return [None] * len(c)
+    out: list = [None] * len(c)
+    gains, losses = 0.0, 0.0
+    for i in range(1, period + 1):
+        chg = c[i] - c[i - 1]
+        gains += max(chg, 0)
+        losses += max(-chg, 0)
+    avg_g, avg_l = gains / period, losses / period
+    out[period] = 100.0 if avg_l == 0 else 100 - 100 / (1 + avg_g / avg_l)
+    for i in range(period + 1, len(c)):
+        chg = c[i] - c[i - 1]
+        avg_g = (avg_g * (period - 1) + max(chg, 0)) / period
+        avg_l = (avg_l * (period - 1) + max(-chg, 0)) / period
+        out[i] = 100.0 if avg_l == 0 else 100 - 100 / (1 + avg_g / avg_l)
+    return out
+
+
+def macd_lines(closes: list, fast: int = 12, slow: int = 26, signal: int = 9):
+    """MACD：返回 (DIF, DEA) 两个序列。"""
+    c = [to_float(x) for x in closes]
+
+    def ema(vals, n):
+        out, k = [], 2 / (n + 1)
+        prev = None
+        for v in vals:
+            prev = v if prev is None else v * k + prev * (1 - k)
+            out.append(prev)
+        return out
+
+    ema_f, ema_s = ema(c, fast), ema(c, slow)
+    dif = [f - s for f, s in zip(ema_f, ema_s)]
+    dea = ema(dif, signal)
+    return dif, dea
+
+
+def tech_bottom_signal(closes: list) -> dict:
+    """
+    技术底部共振（v4.2.0裁决#5口径）：
+    ① 日线RSI(14)<30 出现于近20个交易日；② MACD零轴下方金叉出现于近15个交易日。
+    两者同时满足 → signal=True。
+    """
+    rsi = rsi_series(closes)
+    recent_rsi = [r for r in rsi[-20:] if r is not None]
+    cond_rsi = bool(recent_rsi) and min(recent_rsi) < 30
+    dif, dea = macd_lines(closes)
+    cond_macd = False
+    start = max(1, len(closes) - 15)
+    for i in range(start, len(closes)):
+        if dif[i - 1] <= dea[i - 1] and dif[i] > dea[i] and dif[i] < 0:
+            cond_macd = True
+            break
+    return {"signal": cond_rsi and cond_macd, "RSI超卖近20日": cond_rsi,
+            "MACD零下金叉近15日": cond_macd,
+            "口径": "替代量化口径（v4.2.0裁决#5）：RSI14<30近20日 且 MACD零轴下金叉近15日"}
+
+
+def days_above_ma(closes: list, window: int = 60) -> int:
+    """收盘连续站上 window 日均线的天数（右侧确认口径：≥3日记1分）。"""
+    c = [to_float(x) for x in closes if to_float(x) is not None]
+    if len(c) < window + 1:
+        return 0
+    days = 0
+    for i in range(len(c) - 1, window - 1, -1):
+        ma = sum(c[i - window + 1:i + 1]) / window
+        if c[i] > ma:
+            days += 1
+        else:
+            break
+    return days
+
+
+def volume_stall_signal(closes: list, amounts: list) -> dict:
+    """
+    放量滞涨卖出信号（v4.2.0裁决#12口径）：
+    近5个交易日内出现 [当日成交额≥1.5×近20日均额 且 当日涨跌幅≤0.5% 且 收盘距近60日最高<5%]。
+    """
+    c = [to_float(x) for x in closes]
+    a = [to_float(x) for x in amounts]
+    if len(c) < 61 or len(a) < 25:
+        return {"signal": False, "口径": "样本不足"}
+    hit_days = []
+    for i in range(len(c) - 5, len(c)):
+        if i < 60 or a[i] is None or c[i] is None or c[i - 1] in (None, 0):
+            continue
+        avg20 = avg(a[i - 20:i])
+        if not avg20:
+            continue
+        pct = (c[i] - c[i - 1]) / c[i - 1]
+        high60 = max(x for x in c[i - 59:i + 1] if x is not None)
+        if a[i] >= 1.5 * avg20 and pct <= 0.005 and c[i] >= 0.95 * high60:
+            hit_days.append(i)
+    return {"signal": bool(hit_days),
+            "口径": "近5日内[成交额≥1.5×20日均额 且 涨跌幅≤0.5% 且 距60日高点<5%]（v4.2.0裁决#12）"}
+
+
+# =============================================================================
 # 格式化（报告展示用）
 # =============================================================================
 

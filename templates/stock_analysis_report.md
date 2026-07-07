@@ -37,7 +37,7 @@
 
 {conclusion_section}
 
-### 待人工核验清单
+### 推定判定与数据口径说明（v4.2.0全自动化）
 
 {manual_check_section}
 

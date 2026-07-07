@@ -10,6 +10,17 @@
         "valuation_model.yaml",
         "risk_control.yaml"
       ]
+    },
+    {
+      "version_id": "v002_20260706_223251",
+      "date": "2026-07-06 22:32:51",
+      "note": "12条待确认口径裁决前的基线备份（v4.1.0）",
+      "files": [
+        "investment_system.yaml",
+        "stock_selection.yaml",
+        "valuation_model.yaml",
+        "risk_control.yaml"
+      ]
     }
   ]
 }

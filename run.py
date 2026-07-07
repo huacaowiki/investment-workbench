@@ -9,7 +9,11 @@ run.py — 投资研究工作台一键入口
   python run.py quarterly [2026-Q2]   季度深度迭代（只出草案）
   python run.py backup-config [备注]   备份当前config到config/history
   python run.py rollback v001_xxx     回滚config到指定历史版本
-  python run.py set-state B_neutral   记录人工判定的市场状态（§1.3每周日执行）
+  python run.py judge-state           市场状态程序初判并落盘（v4.2.0自动化；人工判定7日内优先）
+  python run.py set-state B_neutral   人工判定市场状态（优先于程序初判，7日有效）
+  python run.py watchlist list        查看择时备选池
+  python run.py watchlist add 600519  加入备选池（入池即承担研究笔记义务）
+  python run.py watchlist remove 600519
 """
 from __future__ import annotations
 
@@ -68,7 +72,7 @@ def cmd_stock(code: str):
     path = archive_stock_report(md, meta)
     print(f"✅ 个股报告已生成：{path}")
     print(f"   结论：{result['overall']}")
-    print(f"   待人工核验项：{len(result['manual_items'])} 条（详见报告第八节）")
+    print(f"   推定/口径说明项：{len(result['assumptions'])} 条（详见报告第八节，v4.2.0全自动判定）")
     return path
 
 
@@ -103,7 +107,7 @@ def cmd_rollback(version_id: str):
 
 
 def cmd_set_state(state: str):
-    """记录每周日人工判定的市场状态（§1.3），供仓位映射与择时门槛使用。"""
+    """人工判定市场状态（§1.3，优先于程序初判，7日有效）。"""
     from src.analyzer.market_analyzer import MARKET_STATE_FILE, STATE_KEYS
     from src.utils.file_utils import write_json
     if state not in STATE_KEYS:
@@ -111,8 +115,65 @@ def cmd_set_state(state: str):
         sys.exit(1)
     write_json(MARKET_STATE_FILE, {"state": state,
                                    "date": datetime.now().strftime("%Y-%m-%d"),
-                                   "note": "人工判定（§1.3：每周日更新，一周内不改判）"})
-    print(f"✅ 市场状态已记录：{state}（{datetime.now():%Y-%m-%d}）")
+                                   "source": "manual",
+                                   "note": "人工判定（§1.3：每周日更新，一周内不改判；优先于程序初判）"})
+    print(f"✅ 市场状态已人工记录：{state}（{datetime.now():%Y-%m-%d}，7日内优先于程序初判）")
+
+
+def cmd_judge_state():
+    """市场状态程序初判（v4.2.0 auto_judgment）：量化条件自动核对并落盘。"""
+    from src.analyzer.market_analyzer import judge_and_record_state, STATE_NAMES_CN
+    result = judge_and_record_state()
+    print("—— 市场状态程序初判（v4.2.0）——")
+    for c in result["conditions"]:
+        mark = {True: "✅", False: "❌", None: "·"}[c["程序判定"]]
+        print(f"  {mark} [{c['区']}] {c['条件']}：{c['当前值']}")
+    print(f"A区命中 {result['a_hits']} 条 ｜ C区命中 {result['c_hits']} 条 ｜ "
+          f"股债利差 {result['equity_bond_spread']:.4f}" if result.get("equity_bond_spread") is not None
+          else f"A区命中 {result['a_hits']} 条 ｜ C区命中 {result['c_hits']} 条 ｜ 股债利差数据缺失")
+    print(f"初判结果：{STATE_NAMES_CN.get(result['auto_state'], '无法判定')}（{result['auto_basis']}）")
+    if result.get("recorded"):
+        print(f"✅ 已落盘 data/processed/market_state.json（source=auto）；人工 set-state 可随时覆盖")
+    else:
+        print(f"ℹ️ 未落盘：{result.get('record_note')}")
+
+
+def cmd_watchlist(action: str, code: str | None = None):
+    """择时备选池维护（§2.3：30-50只，季度审核；入池=承担研究笔记义务）。"""
+    from src.analyzer.stock_analyzer import WATCHLIST_FILE, _watchlist
+    from src.data.data_utils import normalize_stock_code
+    from src.utils.file_utils import write_json
+    stocks = _watchlist()
+    if action == "list":
+        print(f"备选池共 {len(stocks)} 只（§2.3要求30-50只，覆盖≥5行业）：")
+        for s in stocks:
+            print(f"  {s.get('code')}  {s.get('name') or ''}  入池 {s.get('added')}")
+        return
+    if not code:
+        print("❌ 用法：python run.py watchlist add|remove <代码>")
+        sys.exit(1)
+    code = normalize_stock_code(code)
+    if action == "add":
+        if any(s.get("code") == code for s in stocks):
+            print(f"ℹ️ {code} 已在备选池")
+            return
+        name = None
+        try:
+            from src.data.stock_data import get_stock_snapshot
+            name = (get_stock_snapshot(code).get("basic") or {}).get("名称")
+        except Exception:
+            pass
+        stocks.append({"code": code, "name": name,
+                       "added": datetime.now().strftime("%Y-%m-%d")})
+        write_json(WATCHLIST_FILE, {"stocks": stocks})
+        print(f"✅ 已入池：{code} {name or ''}（共{len(stocks)}只）")
+        print("   ⚠️ §2.3义务：入池标的须有研究笔记（商业模式/竞争优势/风险/估值锚），季度审核")
+    elif action == "remove":
+        stocks = [s for s in stocks if s.get("code") != code]
+        write_json(WATCHLIST_FILE, {"stocks": stocks})
+        print(f"✅ 已移出备选池：{code}（余{len(stocks)}只）")
+    else:
+        print("❌ 用法：python run.py watchlist list|add|remove [代码]")
 
 
 def main():
@@ -128,6 +189,9 @@ def main():
         "backup-config": lambda: cmd_backup(" ".join(args)),
         "rollback": lambda: cmd_rollback(args[0]) if args else print("❌ 用法：python run.py rollback <版本号>"),
         "set-state": lambda: cmd_set_state(args[0]) if args else print("❌ 用法：python run.py set-state <A_undervalued|B_low|B_neutral|B_high|C_overvalued>"),
+        "judge-state": cmd_judge_state,
+        "watchlist": lambda: cmd_watchlist(args[0], args[1] if len(args) > 1 else None)
+        if args else print("❌ 用法：python run.py watchlist list|add|remove [代码]"),
     }
     if cmd not in dispatch:
         print(f"❌ 未知命令 {cmd}\n{__doc__}")

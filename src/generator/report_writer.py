@@ -14,7 +14,7 @@ from src.utils.file_utils import DIRS, load_config, read_text
 
 STATE_NAMES = {"A_undervalued": "A区·低估", "B_low": "B偏低", "B_neutral": "B中性",
                "B_high": "B偏高", "C_overvalued": "C区·高估"}
-STATUS_ICON = {"PASS": "✅ 通过", "FAIL": "❌ 不满足", "MISSING": "⚠️ 数据缺失", "MANUAL": "📝 待人工"}
+STATUS_ICON = {"PASS": "✅ 通过", "FAIL": "❌ 不满足", "MISSING": "⚠️ 数据缺失"}
 
 
 class _SafeDict(dict):
@@ -82,17 +82,26 @@ def render_daily_report(analysis: dict) -> tuple[str, dict]:
                          (f"（{v['timing_note']}）" if v.get("timing_note") else "")])
 
     alerts_md = "\n".join(f"- **[{a['级别']}]** {a['内容']}" for a in analysis["alerts"])
-    hsgt_rows = [[str(r.get("类型", r.get("板块", ""))),
-                  str(r.get("状态", "")), str(r.get("成交净买额", r.get("当日成交净买额", "—")))]
-                 for r in analysis["capital_flow"]["hsgt"]]
+    margin = analysis["capital_flow"]["margin"] or {}
+    margin_lines = [
+        f"- 沪市融资余额（最新）：{fmt_yi(margin.get('沪市融资余额_最新'))}，"
+        f"较10个交易日前 {fmt_pct(margin.get('沪市10日变化率'), signed=True)}",
+        f"- 深市融资余额（最新）：{fmt_yi(margin.get('深市融资余额_最新'))}",
+        f"- 两市融资余额合计：{fmt_yi(margin.get('两市融资余额_最新'))}",
+        f"> {margin.get('口径', '两融数据缺失')}",
+    ]
     lhb_rows = [[r.get("代码"), r.get("名称"),
                  fmt_pct((r.get("涨跌幅") or 0) / 100) if r.get("涨跌幅") is not None else "—",
                  fmt_yi(r.get("龙虎榜净买额")), (r.get("上榜原因") or "")[:20]]
                 for r in analysis["capital_flow"]["lhb"]]
 
-    vol = safe_get(analysis, "volatility", "近20日年化波动率")
+    vol = safe_get(analysis, "volatility", "数值")
+    vol_name = safe_get(analysis, "volatility", "指标") or "波动率"
+    vol_note = safe_get(analysis, "volatility", "口径") or ""
+    cs_pe = safe_get(analysis, "csindex_pe", "市盈率1")
     quality_lines = [f"- 10年期国债收益率：{fmt_pct(analysis.get('cn10y_yield'))}（股息率门槛锚定值）",
-                     f"- 沪深300近20日年化波动率：{fmt_pct(vol)}（历史波动率近似口径，待确认#2）",
+                     f"- 波动率：{vol_name} = {fmt_pct(vol)}（{vol_note}；严格风控触发线35%）",
+                     f"- 中证全指PE1：{cs_pe}（'全A PE<22'与股债利差的替代口径，{safe_get(analysis, 'csindex_pe', '日期')}）",
                      f"- 板块数据源：{sector.get('source_note')}"]
     for k, v in (analysis.get("errors") or {}).items():
         quality_lines.append(f"- ⚠️ `{k}` 拉取失败：{v}（该项分析按缺失处理）")
@@ -113,13 +122,15 @@ def render_daily_report(analysis: dict) -> tuple[str, dict]:
         sector_top_table=_table(["板块", "涨跌幅", "领涨股/家数"], sector_rows(sector["top"])),
         sector_bottom_table=_table(["板块", "涨跌幅", "领涨股/家数"], sector_rows(sector["bottom"])),
         sector_conclusion="",
-        capital_flow_section=("**沪深港通概况**\n\n" + _table(["类型", "状态", "净买额"], hsgt_rows) +
+        capital_flow_section=("**两融资金（融资余额）**\n\n" + "\n".join(margin_lines) +
                               "\n\n**龙虎榜净买入前列**\n\n" +
                               _table(["代码", "名称", "涨跌幅", "净买额", "上榜原因"], lhb_rows)),
         market_state_section=(
             _table(["区", "条件", "程序判定", "当前值"], cond_rows) +
+            f"\n\n**程序初判**：{STATE_NAMES.get(state.get('auto_state'), '无法判定')}"
+            f"（A区命中 {state.get('a_hits')} 条 / C区命中 {state.get('c_hits')} 条 / "
+            f"股债利差 {fmt_pct(state.get('equity_bond_spread'))}）"
             f"\n\n**当前生效状态**：{STATE_NAMES.get(state.get('effective_state'), '未判定')}"
-            + (f"（人工判定于 {state.get('manual_state_date')}）" if state.get("manual_state") else "") +
             f"\n\n> {state['note']}"),
         position_constraint_section=_table(["市场状态", "股息组合仓位上限", "择时组合仓位上限"], pos_rows) +
             "\n\n> 严格风控模式（§1.5）触发条件：年度盈利>15% / 进入C区 / 沪深300波动率>35% → 择时仓位上限30%、单票15%、不开新仓",
@@ -136,7 +147,9 @@ def render_daily_report(analysis: dict) -> tuple[str, dict]:
         "top_sectors": [b.get("板块名称") for b in sector["top"]],
         "bottom_sectors": [b.get("板块名称") for b in sector["bottom"]],
         "effective_state": state.get("effective_state"),
-        "hs300_vol_20d": vol,
+        "auto_state": state.get("auto_state"),
+        "equity_bond_spread": state.get("equity_bond_spread"),
+        "volatility": {"指标": vol_name, "数值": vol},
         "alerts": analysis["alerts"],
         "data_errors": list((analysis.get("errors") or {}).keys()),
     }
@@ -167,6 +180,9 @@ def render_stock_report(snap: dict, result: dict) -> tuple[str, dict]:
         ["股息率TTM", fmt_pct(val.get("股息率TTM"))],
         ["ROE近3年均值", f"{fin.get('ROE近3年均值_pct'):.2f}%" if fin.get("ROE近3年均值_pct") is not None else "—"],
         ["连续分红年数", div.get("连续分红年数")],
+        ["派现比例近3年均值", fmt_pct(safe_get(snap, "payout", "近3年均值"))],
+        ["收现比 / 净现比（最新年度）",
+         f"{fmt_pct(safe_get(snap, 'cashflow_ratios', '收现比_最新'))} / {fmt_pct(safe_get(snap, 'cashflow_ratios', '净现比_最新'))}"],
         ["大股东质押率", fmt_pct(snap.get("pledge_ratio"))],
         ["10年国债收益率", fmt_pct(snap.get("cn10y_yield"))],
     ]
@@ -180,11 +196,11 @@ def render_stock_report(snap: dict, result: dict) -> tuple[str, dict]:
                    f"\n\n> {d['valuation_buy']['conclusion']}\n\n> 加分条件：{d['bonus_note']}" +
                    f"\n\n**股息组合结论**：{d['verdict']}")
 
-    scoring_rows = [[s["项"], "待人工" if s["得分"] is None else s["得分"], s["口径"]] for s in t["scoring"]]
+    scoring_rows = [[s["项"], s["得分"], s["口径"]] for s in t["scoring"]]
     timing_md = ("**备选池入池标准（§2.3）**\n\n" + _checks_table(t["pool"]) +
                  "\n\n**买入门槛条件（§2.4，全部满足）**\n\n" + _checks_table(t["gates"]) +
-                 "\n\n**评分表（每项1分）**\n\n" + _table(["评分项", "得分", "口径说明"], scoring_rows) +
-                 f"\n\n自动口径评分下限：**{t['auto_score_floor']} 分**（人工项确认后重算；评分→仓位映射见 config）" +
+                 "\n\n**评分表（v4.2.0全自动口径，每项1分）**\n\n" + _table(["评分项", "得分", "口径说明"], scoring_rows) +
+                 f"\n\n自动评分：**{t['auto_score_floor']} 分**（自动口径满分4分；政策催化/预期差不参与自动评分，映射阈值不变=偏保守）" +
                  f"\n\n> {t['cooling_note']}\n\n**择时组合结论**：{t['verdict']}")
 
     risk = result["risk"]
@@ -210,7 +226,9 @@ def render_stock_report(snap: dict, result: dict) -> tuple[str, dict]:
                    "",
                    "> 依据§4.4外部观点加工协议：knowledge/reference 中的第三方研报观点仅可作背景论据，任何外部观点必须经加工后才能进入决策流程，不允许'刚看完就买'。"]
 
-    manual_md = _checks_table(result["manual_items"]) if result["manual_items"] else "_无_"
+    stall = result["zone"].get("volume_stall") or {}
+    manual_md = (_checks_table(result["assumptions"]) if result["assumptions"] else "_无_") + \
+        "\n\n> 全部判定为程序自动执行（v4.2.0）；上表列出其中依赖'推定口径'或存在数据缺失的项，供复核数据源。"
 
     filled = tpl.format_map(_SafeDict(
         stock_name=result.get("name") or result["code"],
@@ -223,11 +241,13 @@ def render_stock_report(snap: dict, result: dict) -> tuple[str, dict]:
         dividend_track_section=dividend_md,
         timing_track_section=timing_md,
         valuation_section=(f"**价格区间分级**：{result['zone']['zone']}\n\n> {result['zone']['note']}\n\n" +
+                           f"放量滞涨卖出信号（裁决#12）：{'⚠️ 触发' if stall.get('signal') else '未触发'}"
+                           f"（{stall.get('口径', '样本不足')}）\n\n" +
                            f"行业均值PE：{safe_get(snap, 'peers', '行业均值PE') or '—'}"
                            f"（{safe_get(snap, 'peers', '行业均值PE口径') or '行业对比数据缺失'}）"),
         risk_params_section="\n".join(risk_lines),
         logic_section="\n".join(logic_lines),
-        conclusion_section=f"**综合结论**：{result['overall']}\n\n市场状态背景：{STATE_NAMES.get(result.get('market_state'), '未判定（需周日人工判定）')}",
+        conclusion_section=f"**综合结论**：{result['overall']}\n\n市场状态背景：{STATE_NAMES.get(result.get('market_state'), '未判定（运行 python run.py judge-state）')}",
         manual_check_section=manual_md,
     ))
 
@@ -240,8 +260,8 @@ def render_stock_report(snap: dict, result: dict) -> tuple[str, dict]:
         "pb": val.get("PB"), "dividend_yield": val.get("股息率TTM"),
         "zone": result["zone"]["zone"],
         "overall": result["overall"],
-        "timing_auto_score_floor": t["auto_score_floor"],
-        "manual_item_count": len(result["manual_items"]),
+        "timing_auto_score": t["auto_score_floor"],
+        "assumption_count": len(result["assumptions"]),
         "data_errors": list((snap.get("errors") or {}).keys()),
     }
     return filled, meta

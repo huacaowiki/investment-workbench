@@ -2,17 +2,14 @@
 # investment_system.yaml — 投资理念与总纲（铁则层）
 # 来源：《花茶个人投资体系 v4.1》（archive/原始素材备份/00_我的生效规则/花茶个人投资体系v4.1.md）
 # 本文件是所有分析结论的唯一执行标准之一，任何分析不得突破本文件规则。
-# 所有规则均标注来源章节；原【待确认】条目已于2026-07-06全部裁决，见文件末尾 confirmed_decisions。
+# 所有规则均标注来源章节；【待确认】条目见文件末尾 pending_confirmation。
 # =============================================================================
 
 meta:
-  version: "4.2.0"
+  version: "4.1.0"
   source_document: "花茶个人投资体系v4.1.md"
   structured_date: "2026-07-06"
   changelog:
-    - version: "4.2.0"
-      date: "2026-07-06"
-      note: "用户授权裁决全部12条【待确认】口径并全自动化：C区判定确认≥3条；恐惧贪婪指数以'连续5日成交>1.5万亿'量化替代；政策类条件移出自动判定（保留人工参考）；市场状态引入程序初判(judge-state)+人工可覆盖机制"
     - version: "1.0"
       date: "2026-04-07"
       note: "初版建立，六层框架"
@@ -122,48 +119,26 @@ capability_circle:
 
 # -----------------------------------------------------------------------------
 # 市场状态判断框架（来源：§1.3，两组合共用）
-# v4.2.0 自动化口径（用户2026-07-06裁决）：
-#   - 程序初判（judge-state）基于下方 automated 标注的量化条件；
-#   - 政策/情绪类定性条件（automated: false）不参与程序判定，仅作人工参考；
-#   - A区/C区判定门槛：可判定条件中满足≥3条（C区原文未标门槛，确认参照A区）；
-#   - B区细分按股债利差带；股债利差 = 1/中证全指PE(中证官网市盈率1) - 10年国债收益率
-#     （中证全指为"Wind全A非金融石化"的可编程替代口径，已知偏差：含金融石化，判定时标注）
 # -----------------------------------------------------------------------------
 market_state_framework:
-  update_frequency: "每周日晚更新，记录在案，一周内不改判；程序初判可随时运行，落盘判定以周判为准"
-  auto_judgment:
-    enabled: true
-    equity_bond_spread_formula: "1/中证全指PE - CN10Y"
-    pe_source: "中证指数官网(000985中证全指) 市盈率1"
-    turnover_history: "由每日运行累积（data/processed/turnover_history.json），样本<10日时如实标注"
-    override: "人工 set-state 优先于程序初判"
+  update_frequency: "每周日晚更新，记录在案，一周内不改判"
   states:
     A_undervalued:
       name: "A区·低估"
-      rule: "可判定条件中满足≥3条进入该区"
+      rule: "满足≥3条进入该区"
       conditions:
         - id: "sh_index_low"
           desc: "上证跌破3000点，或市净率历史5%分位以下"
-          automated: true
         - id: "wind_a_pe"
           desc: "Wind全A非金融石化PE < 22倍"
-          automated: true
-          auto_proxy: "中证全指PE(市盈率1) < 22（替代口径，含金融石化，偏保守）"
         - id: "equity_bond_spread_high"
           desc: "股债利差 > 5%"
-          automated: true
         - id: "below_book_ratio"
           desc: "全市场破净率 > 10%"
-          automated: false
-          note: "无可编程公开数据源（2026-07核实），不参与自动判定"
         - id: "low_turnover"
           desc: "日成交额连续10日 < 7000亿 且换手率 < 1.5%"
-          automated: true
-          auto_proxy: "以自建成交额历史序列判定，样本<10日时按已有样本判定并标注"
         - id: "policy_support"
           desc: "官方明确'提振资本市场'表述"
-          automated: false
-          note: "定性条件，仅人工参考（v4.2.0裁决#3）"
     B_low:
       name: "B偏低"
       conditions_desc: "股债利差4.5%-5%，成交额偏低，情绪偏冷"
@@ -178,32 +153,21 @@ market_state_framework:
       equity_bond_spread: [0.03, 0.035]
     C_overvalued:
       name: "C区·高估"
-      rule: "可判定条件中满足≥3条进入该区"   # v4.2.0裁决#1：确认参照A区按≥3条
+      rule: "满足≥3条进入该区"   # 【待确认】原文未明示C区需满足几条，参照A区按≥3条执行，见 pending_confirmation[1]
       conditions:
         - id: "sh_index_high"
           desc: "上证逼近或突破历史高点"
-          automated: true
-          auto_proxy: "上证收盘价 ≥ 历史最高收盘×95%"
         - id: "extreme_greed"
           desc: "恐惧贪婪指数极度贪婪，日成交持续 > 1.5万亿"
-          automated: true
-          auto_proxy: "日成交额连续5日 > 1.5万亿（v4.2.0裁决#2：A股无可编程恐惧贪婪指数，取原文并列描述的可测部分）"
         - id: "new_accounts_high"
           desc: "新股民开户数同比历史高位"
-          automated: false
-          note: "无可编程公开数据源，不参与自动判定"
         - id: "hot_fund_launch"
           desc: "偏股基金出现日光基"
-          automated: false
-          note: "定性条件，仅人工参考"
         - id: "policy_warning"
           desc: "官方提示金融市场风险"
-          automated: false
-          note: "定性条件，仅人工参考（v4.2.0裁决#3）"
         - id: "equity_bond_spread_low"
           desc: "股债利差 < 2%"
-          automated: true
-  source: "v4.1 §1.3；自动化口径为v4.2.0用户裁决"
+  source: "v4.1 §1.3"
 
 # -----------------------------------------------------------------------------
 # 四层研究框架（来源：附录D / 各层引言）
@@ -230,18 +194,18 @@ research_framework:
   source: "v4.1 附录D / 第一~四层引言"
 
 # -----------------------------------------------------------------------------
-# 已裁决口径（原 pending_confirmation，2026-07-06 用户授权全部裁决固化）
+# 待确认清单（模糊/需用户裁决的条目，程序默认按标注的临时口径执行）
 # -----------------------------------------------------------------------------
-confirmed_decisions:
+pending_confirmation:
   - id: 1
-    item: "C区判定门槛"
-    decision: "确认：参照A区，可判定条件满足≥3条进入C区"
-    decided: "2026-07-06"
+    item: "C区判定是否也需满足≥3条"
+    original_text: "§1.3 仅A区标注'满足≥3条进入该区'，C区6项条件未标注判定门槛"
+    interim_rule: "参照A区按满足≥3条执行"
   - id: 2
-    item: "恐惧贪婪指数数据源"
-    decision: "A股无稳定可编程恐惧贪婪指数；C区条件②量化替代为'日成交额连续5日>1.5万亿'（原文并列描述的可测部分）"
-    decided: "2026-07-06"
+    item: "恐惧贪婪指数的具体数据源"
+    original_text: "§1.3 C区条件②'恐惧贪婪指数极度贪婪'，未指明使用哪家指数"
+    interim_rule: "该条件暂由人工判断输入，程序不自动计算"
   - id: 3
-    item: "政策表述类条件"
-    decision: "移出程序自动判定（automated: false），仅作每周人工复核参考；自动判定基于量化条件子集，门槛不变"
-    decided: "2026-07-06"
+    item: "'官方明确提振资本市场表述'与'官方提示金融市场风险'的认定标准"
+    original_text: "§1.3 A区条件⑥ / C区条件⑤"
+    interim_rule: "政策类条件由人工判断输入，程序仅提示待人工确认"

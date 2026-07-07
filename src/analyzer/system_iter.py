@@ -175,7 +175,8 @@ def build_draft_revisions(config: dict, daily_stats: dict, stock_stats: dict,
                          "protected_principles") or []
     drafts = []
 
-    # 1) 待确认项裁决请求（低风险：口径确认）
+    # 1) 待确认项裁决请求（若配置仍有未裁决的 pending_confirmation 则列入；
+    #    v4.2.0 起12条已全部裁决为 confirmed_decisions，此循环通常为空——保留以兼容未来新增模糊点）
     for fname in ["investment_system", "stock_selection", "valuation_model", "risk_control"]:
         for item in (config.get(fname, {}).get("pending_confirmation") or []):
             drafts.append({
