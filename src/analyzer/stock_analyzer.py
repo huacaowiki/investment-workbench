@@ -116,7 +116,30 @@ def evaluate_veto(snap: dict, config: dict) -> list[dict]:
         checks.append(_check("纯概念股量化判定", FAIL if concept else PASS,
                              ("近3年净利全负且市值>200亿→概念股嫌疑" if concept
                               else "盈利结构不符合概念股特征（近3年净利并非全负）"), "§2.1裁决#7"))
+
+    # 新股否决（v4.4.0任务书授权）：上市不满1年→财务/估值序列不足以执行体系规则
+    listing = str(safe_get(snap, "basic", "上市时间") or "")
+    listing_days = _listing_days(listing)
+    if listing_days is None:
+        checks.append(_check("上市不满1年（新股否决）", MISSING, f"上市日期不可解析：{listing or '缺失'}", "v4.4.0"))
+    else:
+        checks.append(_check("上市不满1年（新股否决）", FAIL if listing_days < 365 else PASS,
+                             f"上市 {listing_days} 天（{listing[:10]}）" +
+                             ("→ 新股否决：仅输出基础数据，不给投资评级" if listing_days < 365 else ""),
+                             "v4.4.0"))
     return checks
+
+
+def _listing_days(listing: str) -> int | None:
+    """上市日期字符串→距今天数。支持 '2001-08-27' / '20010827' / '2001-08-27 00:00:00'。"""
+    from datetime import datetime
+    s = listing.strip()[:10].replace("/", "-")
+    for fmt in ("%Y-%m-%d", "%Y%m%d"):
+        try:
+            return (datetime.now() - datetime.strptime(s if "-" in s else s[:8], fmt)).days
+        except ValueError:
+            continue
+    return None
 
 
 # -----------------------------------------------------------------------------
@@ -622,4 +645,21 @@ def analyze_stock(snap: dict, config: dict | None = None,
         result["multi_valuation"] = multi_anchor_valuation(snap, config, cls["category"])
     except Exception as exc:  # noqa: BLE001
         result["multi_valuation"] = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+    # 技术面六维度（v4.5.0模块四）：量化描述，失败降级不影响主链路
+    try:
+        from src.analyzer.tech_analysis import analyze_technicals
+        result["technicals"] = analyze_technicals(snap)
+    except Exception as exc:  # noqa: BLE001
+        result["technicals"] = {"available": False, "trend": [], "supports": [],
+                                "resistances": [], "verdict": "异常",
+                                "note": f"技术面引擎异常：{type(exc).__name__}: {exc}"}
+    # 综合评分/评级/仓位（v4.4.0 composite_scoring 执行器）
+    try:
+        from src.analyzer.rating import composite_rating
+        result["rating"] = composite_rating(result, snap, config, market_state)
+        if result["rating"].get("gate_reason"):
+            result["overall"] = f"排除：{result['rating']['gate_reason']}"
+    except Exception as exc:  # noqa: BLE001
+        result["rating"] = {"评级": "观望", "综合得分": None,
+                            "评级依据": f"评级引擎异常，按保守'观望'输出：{type(exc).__name__}: {exc}"}
     return result

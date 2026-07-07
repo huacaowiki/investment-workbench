@@ -1,5 +1,7 @@
 # A股市场日报 · {report_date}
 
+{headline_section}
+
 > 生成时间：{generated_at} ｜ 数据源：akshare（东财/新浪/巨潮公开接口）
 > 执行标准：config/ 铁则层 v{config_version} ｜ 本报告仅为研究分析，不构成投资建议
 
@@ -40,6 +42,18 @@
 ## 六、仓位约束提示（§1.4 映射，铁则）
 
 {position_constraint_section}
+
+## 六A、当日核心矛盾（多空证据）
+
+{conflict_section}
+
+## 六B、重点指数专项
+
+{spotlight_section}
+
+## 六C、下一交易日情景预判（波动率观察框架，非预测）
+
+{scenario_section}
 
 ## 七、核心风险提示
 

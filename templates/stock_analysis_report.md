@@ -5,6 +5,10 @@
 
 ---
 
+## 〇、综合裁决区（v4.4.0 评分评级联动）
+
+{rating_section}
+
 ## 一、公司概况与数据快照
 
 {basic_section}
@@ -21,6 +25,14 @@
 
 {timing_track_section}
 
+## 四A、技术面分析（六维量化）
+
+{tech_section}
+
+## 四B、基本面核心指标
+
+{fundamental_section}
+
 ## 五、估值分析（valuation_model.yaml v4.3.0 多锚点体系）
 
 {valuation_section}
@@ -35,9 +47,21 @@
 
 {logic_section}
 
+### 多空交锋（证据与工程权重）
+
+{bull_bear_section}
+
 ### 四类风险矩阵（宏观 / 行业 / 公司 / 估值）
 
 {risk_matrix_section}
+
+### 实操方案（risk_control 铁则）
+
+{action_plan_section}
+
+### 关键验证节点
+
+{nodes_section}
 
 ## 八、结论
 

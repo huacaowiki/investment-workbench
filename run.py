@@ -41,18 +41,30 @@ def cmd_daily(day: str | None = None, output_format: str = "html"):
     from src.generator.archiver import archive_daily_report
     from src.utils.file_utils import load_config
 
+    # 非交易日兜底（v4.5.0）：周末且未指定历史日期 → 不强行生成空报告
+    if day is None and datetime.now().weekday() >= 5:
+        print("ℹ️ 今日为周末非交易日，无当日行情数据。如需生成历史日报：python run.py daily YYYYMMDD")
+        return None
     print("① 拉取市场数据……")
     snap = get_market_snapshot(day=day)
+    if not snap.get("index_spot"):
+        print("❌ 指数行情数据不可得（非交易日/休市或数据源全部异常），不生成残缺报告。")
+        print(f"   数据错误：{snap.get('errors')}")
+        return None
     if snap["errors"]:
         print(f"   ⚠️ 部分数据缺失：{list(snap['errors'])}（按缺失处理，不影响出报）")
     print("② 执行市场分析（严格对照 config 铁则）……")
     analysis = analyze_market(snap)
     warnings = check_daily_result(analysis, load_config())
     if warnings:
-        print(f"   ⚠️ 逻辑自检发现 {len(warnings)} 条预警（已写入报告第九节）")
+        print(f"   ⚠️ 逻辑自检发现 {len(warnings)} 条预警（已写入报告）")
     print(f"③ 渲染并归档报告（格式：{output_format}）……")
     md, meta = render_daily_report(analysis, self_check=warnings)
-    path = archive_daily_report(md, meta, output_format=output_format)
+    html = None
+    if output_format in ("html", "pdf", "all"):
+        from src.generator.html_report import render_daily_dashboard
+        html = render_daily_dashboard(analysis, self_check=warnings)
+    path = archive_daily_report(md, meta, output_format=output_format, html=html)
     print(f"✅ 市场日报已生成：{path}")
     for note in meta.get("format_notes", []):
         print(f"   ℹ️ {note}")
@@ -86,11 +98,19 @@ def cmd_stock(code: str, output_format: str = "html"):
         print(f"   ⚠️ 逻辑自检发现 {len(warnings)} 条预警（已写入报告第八节）")
     print(f"③ 渲染并归档报告（格式：{output_format}）……")
     md, meta = render_stock_report(snap, result, self_check=warnings)
-    path = archive_stock_report(md, meta, output_format=output_format)
+    html = None
+    if output_format in ("html", "pdf", "all"):
+        from src.generator.html_report import render_stock_dashboard
+        html = render_stock_dashboard(snap, result, self_check=warnings)
+    path = archive_stock_report(md, meta, output_format=output_format, html=html)
     print(f"✅ 个股报告已生成：{path}")
     for note in meta.get("format_notes", []):
         print(f"   ℹ️ {note}")
     print(f"   结论：{result['overall']}")
+    rt = result.get("rating") or {}
+    if rt.get("综合得分") is not None:
+        print(f"   综合评级：{rt.get('评级')}（{rt.get('综合得分')}/100，{rt.get('估值定性')}估值，"
+              f"标的池：{rt.get('pool_level')}）")
     mv = result.get("multi_valuation") or {}
     if mv.get("combined"):
         c = mv["combined"]

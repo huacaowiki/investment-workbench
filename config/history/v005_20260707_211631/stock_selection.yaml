@@ -6,13 +6,9 @@
 # =============================================================================
 
 meta:
-  version: "4.4.0"
+  version: "4.2.0"
   source_document: "花茶个人投资体系v4.1.md"
   structured_date: "2026-07-06"
-  changelog_4_4_0: >
-    2026-07-07 用户授权（报告体系重构任务书）：新增 composite_scoring 展示层百分制评分映射
-    与 rating_mapping 评级/仓位推导（门槛制判定本身不变，FAIL仍直接排除；评级恒受体系
-    铁则约束封顶）；新增 listing_age 新股否决（上市不满1年→否决，仅输出基础数据不评级）。
   changelog_4_2_0: >
     2026-07-06 用户授权裁决：#4分位窗口固化近10年（乐咕→自算→百度三级源）；
     #5技术底部替代量化口径（RSI+MACD共振）；#6评分冲突采严格口径（1-2分仅观察）；
@@ -57,10 +53,7 @@ veto_rules:
     - id: "pure_concept_quant"
       rule: "纯概念股量化判定（v4.2.0裁决#7新增自动口径）"
       auto_rule: "近3年净利润全部为负 且 市值>200亿 → 概念股嫌疑FAIL"
-    - id: "listing_age"
-      rule: "上市不满1年（新股）→ 否决：财务与估值序列不足以执行体系规则，仅输出基础数据，不给投资评级"
-      auto_rule: "v4.4.0任务书授权：basic.上市时间 距今 <365天 → FAIL"
-  source: "v4.1 §2.1 / §2.2；auto_rule为v4.2.0/v4.4.0用户授权的自动化口径"
+  source: "v4.1 §2.1 / §2.2；auto_rule为v4.2.0用户授权的自动化口径"
 
 # -----------------------------------------------------------------------------
 # 股息组合选股标准（来源：§2.2）
@@ -250,73 +243,6 @@ pool_thresholds:
     watch_pool: "备选池标准全满足，门槛条件未全满足或评分1-2分"
     excluded: "备选池标准不满足，或命中一票否决项，或市场处于C区"
   note: "'核心池/观察池'为工程化命名映射，规则实质完全来自§2.2-2.4，无新增标准"
-
-# -----------------------------------------------------------------------------
-# 展示层综合评分映射（v4.4.0任务书授权）
-# 定位：把既有门槛/评分判定结果映射为百分制得分与评级，供报告裁决区展示；
-#       不改变门槛制判定本身——一票否决/门槛FAIL仍直接排除，评级恒受铁则约束封顶。
-# 计分规则：PASS=满分，FAIL=0，MISSING=0（缺失不给分，偏保守），每项报告标注依据。
-# -----------------------------------------------------------------------------
-composite_scoring:
-  dimensions:
-    financial_quality:      # 财务质量 40分
-      total: 40
-      items_default:        # 非金融类
-        - {id: roe,        name: "ROE门槛",   points: 12, source_check: "ROE近3年均值"}
-        - {id: profit,     name: "净利润结构", points: 10, source_check: "净利润近3年"}
-        - {id: debt,       name: "资产负债率", points: 6,  source_check: "资产负债率"}
-        - {id: cash_sales, name: "收现比",    points: 6,  source_check: "收现比"}
-        - {id: cash_profit, name: "净现比",   points: 6,  source_check: "净现比"}
-      items_financial:      # 金融类（收现/净现/负债不适用，权重重分配）
-        - {id: roe,        name: "ROE门槛",   points: 18, source_check: "ROE近3年均值"}
-        - {id: profit,     name: "净利润结构", points: 12, source_check: "净利润近3年"}
-        - {id: div_trend,  name: "分红趋势",  points: 10, source_check: "分红趋势"}
-    dividend_return:        # 分红与股东回报 20分
-      total: 20
-      items:
-        - {id: div_years,  name: "连续分红年数", points: 8, source_check: "连续分红"}
-        - {id: payout,     name: "派现比例",    points: 6, source_check: "派现比例"}
-        - {id: yield_gate, name: "股息率门槛",  points: 6, source_check: "股息率≥max"}
-    liquidity_scale:        # 流动性与规模 10分
-      total: 10
-      items:
-        - {id: mktcap,   name: "市值门槛",  points: 5, source_check: "市值≥"}
-        - {id: turnover, name: "成交额门槛", points: 5, source_check: "日均成交额"}
-    timing_signals:         # 择时信号 15分（4项自动评分×3.75）
-      total: 15
-      per_signal_points: 3.75
-    valuation_position:     # 估值位置 15分（PE或PB历史分位，取更低者）
-      total: 15
-      bands:
-        - {below: 0.30, points: 15}
-        - {below: 0.50, points: 10}
-        - {below: 0.70, points: 5}
-        - {below: 1.01, points: 0}
-      insufficient_samples_points: 0   # 分位样本不足→0分并标注
-
-rating_mapping:   # 评级/仓位推导（v4.4.0任务书映射 + 体系铁则约束叠加）
-  gates_exclude:  # 前置排除（不进入评分映射，评级=排除）
-    - "一票否决任一FAIL"
-    - "能力圈excluded"
-    - "上市不满1年（listing_age）"
-  rules:
-    - {rating: "买入",     min_score: 80, valuation_state: ["低估"]}
-    - {rating: "逢低建仓", min_score: 60, valuation_state: ["低估", "合理"]}
-    - {rating: "观望",     min_score: 0,  valuation_state: ["低估", "合理", "高估"]}
-  system_overrides:   # 体系铁则约束（优先级高于映射）
-    - "市场状态=C_overvalued → 评级封顶'观望'（§1.4只卖不买）"
-    - "市场状态=B_high → '买入'降级为'逢低建仓'（§1.4暂停买入/不开新仓）"
-  position_by_rating:   # 建议仓位=系数×risk_control单票上限×能力圈系数，恒不突破铁则
-    买入: 1.00
-    逢低建仓: 0.50
-    观望: 0.0
-    排除: 0.0
-  valuation_state_source: >
-    估值定性优先取多锚综合区间位置（<安全边际价=低估/区间内=合理/>高估阈=高估）；
-    多锚不可用时回退历史分位（<30%低估、30-70%合理、≥70%高估）并标注回退口径。
-  confidence_levels: >
-    信心水平=数据完备度工程口径（非主观）：高=可用估值方法≥3且无MISSING且分位窗口标准；
-    中=可用方法2种或存在≤3项MISSING；低=其余情形。
 
 confirmed_decisions:   # 原 pending_confirmation，2026-07-06 用户授权全部裁决固化
   - id: 4

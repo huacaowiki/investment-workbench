@@ -64,7 +64,7 @@ def _basic_info(code: str) -> dict:
 
 
 def _quote_summary(code: str) -> dict:
-    """行情摘要：现价、52周高点回撤、60日线、近5/20日日均成交额。主源东财，备源新浪。"""
+    """行情摘要：现价、52周高低/回撤、年内涨跌、均线与技术信号输入。主源东财，备源新浪。"""
     import akshare as ak
     end = datetime.now().strftime("%Y%m%d")
     start = (datetime.now() - timedelta(days=400)).strftime("%Y%m%d")
@@ -73,17 +73,30 @@ def _quote_summary(code: str) -> dict:
                                 start_date=start, end_date=end, adjust="qfq")
         closes = [to_float(x) for x in df["收盘"].tolist()]
         amounts = [to_float(x) for x in df["成交额"].tolist()]
+        highs = [to_float(x) for x in df["最高"].tolist()]
+        lows = [to_float(x) for x in df["最低"].tolist()]
+        dates = [str(x) for x in df["日期"].tolist()]
     except Exception:   # 备源：新浪日线（amount字段=成交额）
         df = ak.stock_zh_a_daily(symbol=_sina_symbol(code), adjust="qfq")
         df = df.tail(270)
         closes = [to_float(x) for x in df["close"].tolist()]
         amounts = [to_float(x) for x in df["amount"].tolist()]
+        highs = [to_float(x) for x in df["high"].tolist()]
+        lows = [to_float(x) for x in df["low"].tolist()]
+        dates = [str(x) for x in df["date"].tolist()]
     year_closes = closes[-252:] if len(closes) > 252 else closes
+    year_highs = [x for x in (highs[-252:] if len(highs) > 252 else highs) if x]
+    year_lows = [x for x in (lows[-252:] if len(lows) > 252 else lows) if x]
     ma60 = moving_average(closes, 60)
     last = closes[-1] if closes else None
+    # 年内涨跌幅：当前年份首个交易日收盘为基准
+    this_year = datetime.now().strftime("%Y")
+    ytd_base = next((c for d, c in zip(dates, closes) if str(d)[:4] == this_year and c), None)
     return {
         "最新收盘价": last,
-        "52周最高": max(year_closes) if year_closes else None,
+        "52周最高": max(year_highs) if year_highs else (max(year_closes) if year_closes else None),
+        "52周最低": min(year_lows) if year_lows else (min(year_closes) if year_closes else None),
+        "年内涨跌幅": ((last - ytd_base) / ytd_base if (last and ytd_base) else None),
         "较1年内高点回撤": drawdown_from_high(year_closes),   # 择时门槛：≥25%
         "MA60": ma60,
         "站上60日线": (last is not None and ma60 is not None and last > ma60),
@@ -92,6 +105,9 @@ def _quote_summary(code: str) -> dict:
         "放量滞涨信号": volume_stall_signal(closes, amounts),   # v4.2.0裁决#12
         "近5日日均成交额": avg(amounts[-5:]),     # 择时池门槛：>1亿
         "近20日日均成交额": avg(amounts[-20:]),   # 股息池门槛：>1亿
+        # v4.5.0：技术面引擎输入（近130交易日K线序列，个股报告模块四使用）
+        "kline": {"dates": dates[-130:], "closes": closes[-130:],
+                  "highs": highs[-130:], "lows": lows[-130:], "amounts": amounts[-130:]},
     }
 
 
@@ -451,19 +467,30 @@ def _cashflow_ratios(code: str) -> dict:
         return None
 
     cf3, pl3 = annual_rows(cf), annual_rows(pl)
-    out = []
+    out, detail = [], []
     for (_, c), (_, p) in zip(cf3.iterrows(), pl3.iterrows()):
         sales_cash = col_val(c, "销售商品、提供劳务收到的现金")
         op_cash = col_val(c, "经营活动产生的现金流量净额", "经营活动产生的现金流量")
         revenue = col_val(p, "营业收入", "一、营业总收入", "营业总收入")
+        cost = col_val(p, "营业成本", "其中：营业成本")
         profit = col_val(p, "净利润", "五、净利润")
+        rd = col_val(p, "研发费用")
         out.append({
             "年度": str(c["报告日"])[:4],
             "收现比": (sales_cash / revenue) if (sales_cash and revenue) else None,
             "净现比": (op_cash / profit) if (op_cash and profit and profit > 0) else None,
         })
+        detail.append({   # v4.5.0：个股报告基本面模块的核心指标序列
+            "年度": str(c["报告日"])[:4],
+            "营收": revenue,
+            "毛利": (revenue - cost) if (revenue and cost) else None,
+            "净利润": profit,
+            "研发费用": rd,
+            "经营现金流": op_cash,
+        })
     latest = out[-1] if out else {}
     return {"各年": out, "收现比_最新": latest.get("收现比"), "净现比_最新": latest.get("净现比"),
+            "基本面明细": detail,
             "口径": "新浪年度报表：销售收现/营业收入、经营净现流/净利润（金融行业不适用，分析层按类豁免）"}
 
 

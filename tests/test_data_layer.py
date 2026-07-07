@@ -190,7 +190,9 @@ class TestStockSnapshot:
         import akshare as ak
         n = 300
         closes = [100.0] * (n - 1) + [75.0]     # 高点100，现价75 → 回撤25%
-        hist = pd.DataFrame({"收盘": closes, "成交额": [2e8] * n})
+        hist = pd.DataFrame({"收盘": closes, "成交额": [2e8] * n,
+                             "最高": closes, "最低": closes,
+                             "日期": [f"2026-01-{(i % 28) + 1:02d}" for i in range(n)]})
         monkeypatch.setattr(ak, "stock_zh_a_hist", lambda **k: hist, raising=False)
         q = stock_data._quote_summary("600519")
         assert abs(q["较1年内高点回撤"] - 0.25) < 1e-9      # 择时门槛临界值

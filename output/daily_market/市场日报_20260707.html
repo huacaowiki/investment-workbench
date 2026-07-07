@@ -1,391 +1,114 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>A股市场日报 20260707</title>
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>A股市场日报 2026-07-07</title>
 <style>
-:root {
-  --bg: #F7F7F8; --card: #FFFFFF; --primary: #4F46E5;
-  --text: #1F2937; --muted: #6B7280; --up: #059669; --down: #DC2626;
-  --warn-bg: #FFF7ED; --warn-fg: #C2410C; --border: #E5E7EB;
-}
-* { box-sizing: border-box; }
-body {
-  margin: 0; padding: 32px 16px; background: var(--bg); color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei",
-               "PingFang SC", "Noto Sans SC", sans-serif;
-  font-size: 15px; line-height: 1.6;
-}
-.report {
-  max-width: 860px; margin: 0 auto; background: var(--card);
-  border: 1px solid var(--border); border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.03);
-  padding: 40px 48px;
-}
-h1 { font-size: 26px; line-height: 1.35; margin: 0 0 12px; letter-spacing: -0.01em; }
-h2 {
-  font-size: 19px; margin: 36px 0 14px; padding-bottom: 8px;
-  border-bottom: 1px solid var(--border); letter-spacing: -0.01em;
-}
-h3 { font-size: 16px; margin: 24px 0 10px; color: var(--text); }
-p { margin: 10px 0; }
-strong { font-weight: 600; }
-a { color: var(--primary); text-decoration: none; }
-hr { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
-blockquote {
-  margin: 14px 0; padding: 10px 16px; background: var(--warn-bg);
-  border-left: 3px solid var(--warn-fg); border-radius: 0 12px 12px 0;
-  color: var(--warn-fg); font-size: 13.5px;
-}
-blockquote p { margin: 4px 0; }
-table {
-  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px;
-  border: none; page-break-inside: avoid;
-}
-th {
-  text-align: left; font-weight: 600; color: var(--muted); font-size: 12.5px;
-  padding: 8px 10px; border-bottom: 1px solid var(--border); background: transparent;
-}
-td { padding: 8px 10px; border-bottom: 1px solid #F0F0F2; vertical-align: top; }
-tr:hover td { background: #FAFAFB; }
-tr:last-child td { border-bottom: none; }
-ul, ol { margin: 10px 0; padding-left: 22px; }
-li { margin: 4px 0; }
-code {
-  background: #F3F4F6; border-radius: 6px; padding: 1px 6px;
-  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 13px;
-}
-.up { color: var(--up); } .down { color: var(--down); }
-.meta-note { color: var(--muted); font-size: 12.5px; }
-.footer {
-  max-width: 860px; margin: 20px auto 0; text-align: center;
-  color: var(--muted); font-size: 12px;
-}
-/* 打印/PDF：卡片表格不跨页断裂，每页重复页脚 */
-@media print {
-  body { background: #FFFFFF; padding: 0 0 40px 0; }
-  .report { border: none; box-shadow: none; padding: 8px 6px; max-width: 100%; }
-  h2 { page-break-after: avoid; }
-  table, blockquote { page-break-inside: avoid; }
-  tr:hover td { background: transparent; }
-  .footer { display: none; }
-  .pdf-footer {
-    display: block; position: fixed; bottom: 0; left: 0; right: 0;
-    text-align: center; font-size: 10.5px; color: #6B7280;
-    border-top: 1px solid #E5E7EB; padding: 6px 0 2px; background: #FFFFFF;
-  }
-}
-.pdf-footer { display: none; }
-@page { margin: 16mm 12mm 20mm 12mm; }
-</style>
-</head>
-<body>
-<div class="report">
-<h1>A股市场日报 · 20260707</h1>
-<blockquote>
-<p>生成时间：2026-07-07 15:32 ｜ 数据源：akshare（东财/新浪/巨潮公开接口）
-执行标准：config/ 铁则层 v4.2.0 ｜ 本报告仅为研究分析，不构成投资建议</p>
-</blockquote>
-<hr />
-<h2>一、大盘指数总览</h2>
-<table>
-<thead>
-<tr>
-<th>指数</th>
-<th>收盘</th>
-<th>涨跌幅</th>
-<th>成交额</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>上证指数</td>
-<td>3990.2353</td>
-<td><span class="down">-1.26%</span></td>
-<td>11963.71亿</td>
-</tr>
-<tr>
-<td>沪深300</td>
-<td>4792.2624</td>
-<td><span class="down">-1.03%</span></td>
-<td>7626.18亿</td>
-</tr>
-<tr>
-<td>科创50</td>
-<td>2001.5859</td>
-<td><span class="up">+0.28%</span></td>
-<td>1595.60亿</td>
-</tr>
-<tr>
-<td>中证500</td>
-<td>8508.7885</td>
-<td><span class="down">-1.65%</span></td>
-<td>5309.38亿</td>
-</tr>
-<tr>
-<td>深证成指</td>
-<td>15225.113</td>
-<td><span class="down">-1.24%</span></td>
-<td>13847.77亿</td>
-</tr>
-<tr>
-<td>创业板指</td>
-<td>3911.907</td>
-<td><span class="down">-0.94%</span></td>
-<td>6220.30亿</td>
-</tr>
-</tbody>
-</table>
-<p>两市成交额合计约 <strong>25811.49亿</strong>（上证+深成口径）</p>
-<h2>二、市场情绪与涨跌结构</h2>
-<ul>
-<li>上涨 639.0 家 / 下跌 4535.0 家（上涨占比 12.35%）</li>
-<li>涨停 25 家 / 跌停 3 家</li>
-<li>情绪观察分：<strong>4.3 / 10</strong><blockquote>
-<p>情绪观察分为报告展示用工程化指标（上涨占比60%+涨跌停结构40%），非config铁则，不参与规则判定</p>
-</blockquote>
-</li>
-</ul>
-<h2>三、板块强弱排序</h2>
-<p><strong>领涨板块（前5）</strong></p>
-<table>
-<thead>
-<tr>
-<th>板块</th>
-<th>涨跌幅</th>
-<th>领涨股/家数</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>供水供气</td>
-<td><span class="down">-0.06%</span></td>
-<td>25</td>
-</tr>
-<tr>
-<td>次新股</td>
-<td><span class="down">-0.63%</span></td>
-<td>137</td>
-</tr>
-<tr>
-<td>公路桥梁</td>
-<td><span class="down">-0.93%</span></td>
-<td>20</td>
-</tr>
-<tr>
-<td>电子信息</td>
-<td><span class="down">-1.06%</span></td>
-<td>247</td>
-</tr>
-<tr>
-<td>机械行业</td>
-<td><span class="down">-1.09%</span></td>
-<td>211</td>
-</tr>
-</tbody>
-</table>
-<p><strong>领跌板块（后5）</strong></p>
-<table>
-<thead>
-<tr>
-<th>板块</th>
-<th>涨跌幅</th>
-<th>领涨股/家数</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>纺织机械</td>
-<td><span class="down">-4.97%</span></td>
-<td>8</td>
-</tr>
-<tr>
-<td>摩托车</td>
-<td><span class="down">-4.51%</span></td>
-<td>6</td>
-</tr>
-<tr>
-<td>发电设备</td>
-<td><span class="down">-4.27%</span></td>
-<td>65</td>
-</tr>
-<tr>
-<td>综合行业</td>
-<td><span class="down">-3.95%</span></td>
-<td>33</td>
-</tr>
-<tr>
-<td>医疗器械</td>
-<td><span class="down">-3.84%</span></td>
-<td>31</td>
-</tr>
-</tbody>
-</table>
-<h2>四、资金动向</h2>
-<p><strong>两融资金（融资余额）</strong></p>
-<ul>
-<li>沪市融资余额（最新）：14941.17亿，较10个交易日前 <span class="down">-0.76%</span></li>
-<li>深市融资余额（最新）：14568.13亿</li>
-<li>两市融资余额合计：29509.30亿<blockquote>
-<p>交易所官方两融数据（沪市聚合序列+深市明细汇总）；北向数据已停发按裁决删除</p>
-</blockquote>
-</li>
-</ul>
-<p><strong>龙虎榜净买入前列</strong></p>
-<p><em>（无数据）</em></p>
-<blockquote>
-<p>口径说明：北向资金数据已停发（v4.2.0裁决删除），资金动向采用交易所官方两融数据；龙虎榜为当日营业部/机构席位净买入前列。</p>
-</blockquote>
-<h2>五、市场状态判定（§1.3 A/B/C区框架）</h2>
-<table>
-<thead>
-<tr>
-<th>区</th>
-<th>条件</th>
-<th>程序判定</th>
-<th>当前值</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>A区</td>
-<td>上证跌破3000点（或PB历史5%分位以下）</td>
-<td>❌ 否</td>
-<td>上证收盘 3990.2353｜PB分位半边无公开数据源，按点位半边判定</td>
-</tr>
-<tr>
-<td>A区</td>
-<td>全A PE&lt;22倍</td>
-<td>✅ 是</td>
-<td>中证全指PE1 = 19.4｜替代口径：中证全指（含金融石化，偏保守）</td>
-</tr>
-<tr>
-<td>A区</td>
-<td>股债利差&gt;5%</td>
-<td>❌ 否</td>
-<td>利差 3.42%（1/PE 5.15% − 国债 1.74%）</td>
-</tr>
-<tr>
-<td>A区</td>
-<td>日成交额连续10日&lt;7000亿</td>
-<td>📝 待人工</td>
-<td>近2日成交额 ['30911亿', '25811亿']…｜自建序列仅2日样本（&lt;10日），连续性条件不参与计分，当前样本趋势：存在≥7000亿；换手率半边无公开序列，按成交额半边判定</td>
-</tr>
-<tr>
-<td>A区</td>
-<td>全市场破净率&gt;10%</td>
-<td>📝 待人工</td>
-<td>不参与自动判定｜无可编程公开数据源（v4.2.0核实）</td>
-</tr>
-<tr>
-<td>A区</td>
-<td>官方'提振资本市场'表述</td>
-<td>📝 待人工</td>
-<td>不参与自动判定｜定性条件（裁决#3）</td>
-</tr>
-<tr>
-<td>C区</td>
-<td>上证逼近/突破历史高点（≥历史最高×95%）</td>
-<td>❌ 否</td>
-<td>收盘 3990.2353 vs 历史最高 6092.057</td>
-</tr>
-<tr>
-<td>C区</td>
-<td>日成交额连续5日&gt;1.5万亿</td>
-<td>📝 待人工</td>
-<td>近2日样本｜样本仅2日（&lt;5日），连续性条件不参与计分，当前样本趋势：全部&gt;1.5万亿；恐惧贪婪指数无可编程源，取原文并列可测部分（裁决#2）</td>
-</tr>
-<tr>
-<td>C区</td>
-<td>股债利差&lt;2%</td>
-<td>❌ 否</td>
-<td>利差 3.42%</td>
-</tr>
-<tr>
-<td>C区</td>
-<td>新股民开户数同比历史高位</td>
-<td>📝 待人工</td>
-<td>不参与自动判定｜无可编程公开数据源</td>
-</tr>
-<tr>
-<td>C区</td>
-<td>偏股基金日光基</td>
-<td>📝 待人工</td>
-<td>不参与自动判定｜定性条件</td>
-</tr>
-<tr>
-<td>C区</td>
-<td>官方提示金融市场风险</td>
-<td>📝 待人工</td>
-<td>不参与自动判定｜定性条件（裁决#3）</td>
-</tr>
-</tbody>
-</table>
-<p><strong>程序初判</strong>：B偏高（A区命中 1 条 / C区命中 0 条 / 股债利差 3.42%）</p>
-<p><strong>当前生效状态</strong>：B偏高</p>
-<blockquote>
-<p>生效状态来源：程序初判（A区命中1条/C区命中0条（均&lt;3），按股债利差 3.42% 落入B区细分带）；人工 set-state 可覆盖</p>
-</blockquote>
-<h2>六、仓位约束提示（§1.4 映射，铁则）</h2>
-<table>
-<thead>
-<tr>
-<th>市场状态</th>
-<th>股息组合仓位上限</th>
-<th>择时组合仓位上限</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>A区·低估</td>
-<td>100.00%</td>
-<td>100.00%</td>
-</tr>
-<tr>
-<td>B偏低</td>
-<td>80.00%</td>
-<td>70.00%</td>
-</tr>
-<tr>
-<td>B中性</td>
-<td>70.00%</td>
-<td>50.00%</td>
-</tr>
-<tr>
-<td>B偏高 ◀ 当前</td>
-<td>60.00%</td>
-<td>40.00%（不开新仓）</td>
-</tr>
-<tr>
-<td>C区·高估</td>
-<td>暂停买入 + 逐票执行估值卖出触发检查（valuation_model.yaml sell_triggers），原文'考虑减持高估标的'的确认口径</td>
-<td>20.00%（只卖不买，降至20%以下）</td>
-</tr>
-</tbody>
-</table>
-<blockquote>
-<p>严格风控模式（§1.5）触发条件：年度盈利&gt;15% / 进入C区 / 沪深300波动率&gt;35% → 择时仓位上限30%、单票15%、不开新仓</p>
-</blockquote>
-<h2>七、核心风险提示</h2>
-<ul>
-<li><strong>[P3]</strong> 数据缺失项：lhb（分析已按缺失处理）</li>
-</ul>
-<h2>八、数据缺失与口径说明</h2>
-<ul>
-<li>10年期国债收益率：1.74%（股息率门槛锚定值）</li>
-<li>波动率：QVIX(300ETF期权隐含波动率) = 20.29%（主口径（v4.2.0裁决#11）；严格风控触发线35%）</li>
-<li>中证全指PE1：19.4（'全A PE&lt;22'与股债利差的替代口径，2026-06-09）</li>
-<li>板块数据源：新浪行业(备源)</li>
-<li>⚠️ <code>lhb</code> 拉取失败：TypeError: 'NoneType' object is not subscriptable（该项分析按缺失处理）</li>
-</ul>
-<h2>九、逻辑自检结果</h2>
-<p>✅ 自检通过：分析结论与 config 铁则一致性校验、结论自洽性校验、数值合法性校验、边界口径落实校验全部通过。</p>
-<hr />
-<p><strong>免责声明</strong>：本报告由个人投资研究工作台自动生成，全部内容仅为个人研究记录与策略框架支撑，
-不构成任何证券买卖建议或投资咨询意见。市场有风险，决策需独立判断并自担后果。</p>
-</div>
-<div class="footer">投资研究工作台 · A股市场日报 20260707 · 生成于 2026-07-07 15:32 · 仅研究分析，不构成投资建议</div>
-<div class="pdf-footer">A股市场日报 20260707 ｜ 生成日期 2026-07-07 15:32 ｜ 投资研究工作台 · 仅研究分析不构成投资建议</div>
-</body>
-</html>
+:root { --bg:#F7F7F8; --card:#FFFFFF; --primary:#4F46E5; --text:#1F2937;
+  --muted:#6B7280; --up:#DC2626; --down:#059669; --warn-bg:#FFF7ED;
+  --warn-fg:#C2410C; --border:#E5E7EB; --soft:#F3F4F6; }
+*{box-sizing:border-box} body{margin:0;padding:28px 14px;background:var(--bg);
+  color:var(--text);font-family:-apple-system,"Segoe UI","Microsoft YaHei","SimHei",
+  "PingFang SC",sans-serif;font-size:14.5px;line-height:1.6}
+.wrap{max-width:960px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 1px 3px rgba(0,0,0,.04),0 4px 14px rgba(0,0,0,.03);
+  padding:22px 26px;margin-bottom:16px;page-break-inside:avoid}
+.card h2{font-size:17px;margin:0 0 14px;padding-bottom:10px;
+  border-bottom:1px solid var(--border);letter-spacing:-.01em}
+.card h3{font-size:14.5px;margin:16px 0 8px}
+h1{font-size:24px;margin:0 0 6px;letter-spacing:-.01em}
+.rule-bar{border-left:3px solid var(--primary);background:var(--soft);
+  border-radius:0 10px 10px 0;padding:8px 14px;font-size:12.5px;color:var(--muted);margin:10px 0}
+.pill{display:inline-block;border-radius:999px;padding:2px 12px;font-size:12px;
+  font-weight:600;margin-right:6px;white-space:nowrap}
+.pill-up{background:#FEF2F2;color:var(--up)} .pill-down{background:#ECFDF5;color:var(--down)}
+.pill-amber{background:#FFFBEB;color:#B45309} .pill-gray{background:var(--soft);color:var(--muted)}
+.pill-primary{background:#EEF2FF;color:var(--primary)}
+.up{color:var(--up);font-weight:600} .down{color:var(--down);font-weight:600}
+.muted{color:var(--muted)} .small{font-size:12px}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px;page-break-inside:avoid}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:12px;
+  padding:7px 9px;border-bottom:1px solid var(--border)}
+td{padding:7px 9px;border-bottom:1px solid #F0F0F2;vertical-align:top}
+tr:hover td{background:#FAFAFB} tr:last-child td{border-bottom:none}
+.grid{display:grid;gap:10px} .g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)} .g2{grid-template-columns:1fr 1fr}
+.kv{background:var(--soft);border-radius:10px;padding:10px 12px}
+.kv .k{font-size:11.5px;color:var(--muted)} .kv .v{font-size:16px;font-weight:650;margin-top:2px}
+.hero{display:grid;grid-template-columns:180px 1fr;gap:16px;align-items:stretch}
+.hero-rating{border-radius:12px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:18px;color:#fff}
+.hero-rating .r{font-size:26px;font-weight:700} .hero-rating .s{font-size:12px;opacity:.9;margin-top:4px}
+.bar-row{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:12.5px}
+.bar-label{width:110px;text-align:right;color:var(--muted);flex-shrink:0}
+.bar-track{flex:1;background:var(--soft);border-radius:6px;height:16px;position:relative;overflow:hidden}
+.bar-fill{height:100%;border-radius:6px}
+.bar-val{width:90px;flex-shrink:0}
+.div-row{display:grid;grid-template-columns:1fr 130px 1fr;align-items:center;gap:8px;
+  margin:4px 0;font-size:12.5px}
+.div-left,.div-right{height:14px;position:relative}
+.div-left .bar-fill{position:absolute;right:0;background:var(--down);border-radius:6px 0 0 6px}
+.div-right .bar-fill{position:absolute;left:0;background:var(--up);border-radius:0 6px 6px 0}
+.gauge{position:relative;background:linear-gradient(90deg,#FCA5A5 0%,#FEF3C7 45%,#D1FAE5 100%);
+  height:14px;border-radius:7px;margin:26px 6px 30px}
+.gauge .tick{position:absolute;top:-22px;font-size:11px;color:var(--muted);transform:translateX(-50%)}
+.gauge .tickb{position:absolute;top:18px;font-size:11px;color:var(--muted);transform:translateX(-50%)}
+.gauge .cur{position:absolute;top:-6px;width:4px;height:26px;background:var(--text);
+  border-radius:2px;transform:translateX(-50%)}
+.risk-hi{background:#FEF2F2;border-left:3px solid var(--up)}
+.risk-mid{background:#FFFBEB;border-left:3px solid #B45309}
+.risk-low{background:var(--soft);border-left:3px solid var(--muted)}
+.risk-item{border-radius:0 10px 10px 0;padding:9px 13px;margin:7px 0;font-size:13px}
+.scen{border-radius:12px;padding:14px;border:1px solid var(--border)}
+.scen h4{margin:0 0 6px;font-size:14px} .scen .rng{font-size:18px;font-weight:700;margin:4px 0}
+.scen-opt{background:#FEF2F2} .scen-mid{background:var(--soft)} .scen-pes{background:#ECFDF5}
+.timeline{list-style:none;padding-left:0;margin:8px 0}
+.timeline li{position:relative;padding:4px 0 10px 22px;border-left:2px solid var(--border);margin-left:8px}
+.timeline li::before{content:"";position:absolute;left:-6px;top:9px;width:10px;height:10px;
+  border-radius:50%;background:var(--primary)}
+.callout{background:var(--warn-bg);color:var(--warn-fg);border-radius:10px;
+  padding:9px 14px;font-size:12.5px;margin:10px 0}
+.footer{color:var(--muted);font-size:11.5px;line-height:1.7;padding:14px 6px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.side{background:var(--soft);border-radius:10px;padding:12px 14px;font-size:13px}
+.side h4{margin:0 0 8px;font-size:13.5px}
+.side ul{margin:0;padding-left:18px} .side li{margin:4px 0}
+@media print { body{background:#fff;padding:0 0 34px} .card{box-shadow:none}
+  tr:hover td{background:transparent}
+  .pdf-footer{display:block;position:fixed;bottom:0;left:0;right:0;text-align:center;
+    font-size:10px;color:var(--muted);border-top:1px solid var(--border);
+    padding:5px 0 2px;background:#fff} }
+.pdf-footer{display:none}
+@media (max-width:640px){.g4,.g3{grid-template-columns:1fr 1fr}.two-col,.hero{grid-template-columns:1fr}}
+@page{margin:14mm 11mm 18mm 11mm}
+</style></head><body><div class="wrap"><div class="card">
+<h1>A股市场日报 · 2026-07-07</h1>
+<div class="muted small">报告属性：体系规则程序化执行的每日市场结构复盘</div>
+<div class="rule-bar">执行标准：config/铁则层 v4.2.0（stock v4.4.0；valuation v4.3.0；risk v4.2.0） ｜ 仅研究分析，不构成投资建议</div>
+<h2 style="border:none;padding:6px 0 0;font-size:20px">指数分化（1/6收红）：科创50 +0.28% 最强，中证500 -1.65% 最弱，个股上涨占比 12%</h2>
+<div><span class="pill pill-primary">两市成交 25811.49亿</span><span class="pill pill-primary">板块 0涨/49跌</span><span class="pill pill-primary">市场状态 B偏高（程序初判）</span><span class="pill pill-primary">两融余额较10日前 -0.76%</span></div></div><div class="card"><h2>二、指数收盘总览</h2><table><thead><tr><th>指数</th><th>收盘</th><th>涨跌幅</th><th>成交额</th><th>主力净流入</th><th>强弱判断</th></tr></thead><tbody><tr><td>上证指数</td><td>3990.24</td><td><span class="down">-1.26%</span></td><td>11963.71亿</td><td><span class="muted small">暂无数据*</span></td><td><span class="pill pill-down">承压</span></td></tr><tr><td>沪深300</td><td>4792.26</td><td><span class="down">-1.03%</span></td><td>7626.18亿</td><td><span class="muted small">暂无数据*</span></td><td><span class="pill pill-down">承压</span></td></tr><tr><td>科创50</td><td>2001.59</td><td><span class="up">+0.28%</span></td><td>1595.60亿</td><td><span class="muted small">暂无数据*</span></td><td><span class="pill pill-up">最强</span></td></tr><tr><td>中证500</td><td>8508.79</td><td><span class="down">-1.65%</span></td><td>5309.38亿</td><td><span class="muted small">暂无数据*</span></td><td><span class="pill pill-down">最弱</span></td></tr><tr><td>深证成指</td><td>15225.11</td><td><span class="down">-1.24%</span></td><td>13847.77亿</td><td><span class="muted small">暂无数据*</span></td><td><span class="pill pill-down">承压</span></td></tr><tr><td>创业板指</td><td>3911.91</td><td><span class="down">-0.94%</span></td><td>6220.30亿</td><td><span class="muted small">暂无数据*</span></td><td><span class="pill pill-down">承压</span></td></tr></tbody></table><div class="muted small">* 主力净流入（四类资金拆分）数据源已停用（东财接口封锁），以下方两融维度替代观察；万得全A/北证50无公开可编程数据源，以沪深300/中证500替代呈现</div></div><div class="card"><h2>三、资金流向分析</h2><div class="two-col">
+<div><h3>沪市融资余额（近8个交易日）</h3><div class="bar-row"><div class="bar-label">06-25</div><div class="bar-track"><div class="bar-fill" style="width:95%;background:#DC2626"></div></div><div class="bar-val">15211.14亿</div></div><div class="bar-row"><div class="bar-label">06-26</div><div class="bar-track"><div class="bar-fill" style="width:76%;background:#DC2626"></div></div><div class="bar-val">15130.64亿</div></div><div class="bar-row"><div class="bar-label">06-29</div><div class="bar-track"><div class="bar-fill" style="width:57%;background:#DC2626"></div></div><div class="bar-val">15052.22亿</div></div><div class="bar-row"><div class="bar-label">06-30</div><div class="bar-track"><div class="bar-fill" style="width:85%;background:#DC2626"></div></div><div class="bar-val">15169.08亿</div></div><div class="bar-row"><div class="bar-label">07-01</div><div class="bar-track"><div class="bar-fill" style="width:92%;background:#DC2626"></div></div><div class="bar-val">15196.88亿</div></div><div class="bar-row"><div class="bar-label">07-02</div><div class="bar-track"><div class="bar-fill" style="width:80%;background:#DC2626"></div></div><div class="bar-val">15149.64亿</div></div><div class="bar-row"><div class="bar-label">07-03</div><div class="bar-track"><div class="bar-fill" style="width:48%;background:#DC2626"></div></div><div class="bar-val">15017.64亿</div></div><div class="bar-row"><div class="bar-label">07-06</div><div class="bar-track"><div class="bar-fill" style="width:30%;background:#DC2626"></div></div><div class="bar-val">14941.17亿</div></div></div>
+<div class="side"><h4>核心资金动向解读</h4><ul><li>沪市融资余额 14941.17亿，较10个交易日前 -0.76%——杠杆资金边际回落，风险偏好收敛</li><li>两市融资余额合计 29509.30亿</li><li>上涨占比 12.35%，涨停 25 家 / 跌停 3 家</li><li>超大单/大单/中单/小单四类资金拆分：暂无数据（原东财接口停用，不编造）</li></ul></div>
+</div></div><div class="card"><h2>四、板块强弱格局（涨幅榜降序 / 跌幅榜按跌幅深→浅）</h2><div class="two-col">
+<div><h3 class="up">涨幅榜 Top0（共0个板块收涨）</h3>
+<p class="muted small">暂无数据</p><div class="callout">今日上涨板块数量不足10个，已如实列示全部上涨板块，不凑数</div></div>
+<div><h3 class="down">跌幅榜 Top10（共49个板块收跌）</h3>
+<table><thead><tr><th>板块</th><th>涨跌幅</th><th>标签</th></tr></thead><tbody><tr><td>纺织机械</td><td><span class="down">-4.97%</span></td><td><span class="pill pill-down">深度杀跌</span></td></tr><tr><td>摩托车</td><td><span class="down">-4.51%</span></td><td><span class="pill pill-down">深度杀跌</span></td></tr><tr><td>发电设备</td><td><span class="down">-4.27%</span></td><td><span class="pill pill-down">深度杀跌</span></td></tr><tr><td>综合行业</td><td><span class="down">-3.95%</span></td><td><span class="pill pill-down">深度杀跌</span></td></tr><tr><td>医疗器械</td><td><span class="down">-3.84%</span></td><td><span class="pill pill-down">深度杀跌</span></td></tr><tr><td>飞机制造</td><td><span class="down">-3.65%</span></td><td><span class="pill pill-down">深度杀跌</span></td></tr><tr><td>化纤行业</td><td><span class="down">-3.57%</span></td><td><span class="pill pill-down">深度杀跌</span></td></tr><tr><td>煤炭行业</td><td><span class="down">-3.56%</span></td><td><span class="pill pill-down">深度杀跌</span></td></tr><tr><td>生物制药</td><td><span class="down">-3.54%</span></td><td><span class="pill pill-down">深度杀跌</span></td></tr><tr><td>农药化肥</td><td><span class="down">-3.47%</span></td><td><span class="pill pill-down">深度杀跌</span></td></tr></tbody></table></div>
+</div><div class="muted small">数据源：新浪行业(备源)；标签为涨跌幅分档的数据标注，非叙事判断</div></div><div class="card"><h2>五、当日核心矛盾深度解读</h2><div class="two-col">
+<div class="side"><h4 class="up">多头证据（数据直述）</h4><ul><li>涨停 25 家 vs 跌停 3 家（情绪结构偏多）</li></ul></div>
+<div class="side"><h4 class="down">空头证据（数据直述）</h4><ul><li>沪市融资余额较10日前 -0.76%（杠杆资金边际收缩）</li><li>股债利差 3.42% 落入偏高带（&lt;3.5%），指数层面性价比走弱</li><li>上涨家数占比 12.35%（广度偏弱）</li><li>49 个板块收跌，纺织机械 领跌 -4.97%</li></ul></div>
+</div><div class="muted small">多空证据均为当日数据直述，市场解读以体系状态判定为准</div></div><div class="card"><h2>六、重点指数专项分析</h2><div class='two-col'><div class='side'><h4>当日最强：科创50 <span class='up'>+0.28%</span></h4><ul><li>收盘 2001.5859，当日 +0.28%</li><li>成交额 1595.60亿</li><li>在六大指数中当日表现最强</li></ul></div><div class='side'><h4>当日最弱：中证500 <span class='down'>-1.65%</span></h4><ul><li>收盘 8508.7885，当日 -1.65%</li><li>成交额 5309.38亿</li><li>在六大指数中当日表现最弱</li></ul></div></div><div class='muted small'>专项拆解为当日快照数据描述；跨日趋势对比随成交额历史序列累积补全</div></div><div class="card"><h2>七、下一交易日情景预判（波动率观察框架）</h2><div class="grid g3"><div class="scen scen-opt"><h4>乐观情景 ｜ 概率 25%</h4>
+<div class="rng">上证 4016 ~ 4092</div>
+<div class="small muted">触发条件：量能放大且领涨板块延续、两融余额续升、无状态切换级利空</div></div><div class="scen scen-mid"><h4>中性情景 ｜ 概率 50%</h4>
+<div class="rng">上证 3939 ~ 4041</div>
+<div class="small muted">触发条件：量能与结构延续当日格局，多空信号维持均衡</div></div><div class="scen scen-pes"><h4>悲观情景 ｜ 概率 25%</h4>
+<div class="rng">上证 3888 ~ 3965</div>
+<div class="small muted">触发条件：跌停结构扩大、成交萎缩或利差逼近状态切换线</div></div></div><div class="callout">区间由日σ=1.28%（QVIX(300ETF期权隐含波动率)折算）推导，概率为固定观察框架——本情景为波动率推导的观察区间，非行情预测</div></div><div class="card"><h2>八、综合研判与操作提示（体系信号匹配）</h2><p><b>当日市场性质</b>：指数分化（1/6收红）：科创50 +0.28% 最强，中证500 -1.65% 最弱，个股上涨占比 12%</p><h3>体系信号核对</h3><ul><li>市场状态 B偏高：股息组合仓位上限 60.00%，择时组合 40.00%（不开新仓）</li><li>股债利差 3.42%（A区条件>5%/C区条件<2%），A区命中 1 条 / C区命中 0 条</li><li>波动率 20.29%（严格风控触发线35%，§1.5）</li><li>体系操作边界：所有买卖以决策卡片+预设止盈止损触发，本报告不提供具体买卖点</li></ul><h3>核心风险提示</h3><div class="risk-item risk-low">[P3] 无体系规则相关的风险触发</div></div><div class="card"><h2>附：数据口径与逻辑自检</h2><ul><li>10年国债 1.74%；中证全指PE1 19.4</li></ul><h3>逻辑自检</h3>✅ 逻辑自检通过（命中数/仓位映射/情绪分/状态枚举校验全过）</div>
+<div class="card footer">
+<b>指标口径</b>：PE/PB历史分位=近10年三级数据源链（乐咕→自算→百度，窗口随值标注）；派现比例=每股现金分红(税前)/当年EPS；
+收现比/净现比=新浪年报现金流口径；技术指标（MA/MACD/KDJ/BOLL）为标准参数量化计算；波动率=300ETF期权QVIX（备源HV20）；
+股债利差=1/中证全指PE−10年国债；两融=交易所官方数据（北向数据已停发）。审计/监管/诉讼为公告标题关键词扫描推定口径。<br>
+<b>数据来源</b>：akshare聚合的公开接口（东方财富/新浪财经/巨潮资讯/中证指数/同花顺/交易所官网），可能存在延迟或误差，关键决策前请复核原始公告。<br>
+<b>免责声明</b>：本报告由个人投资研究工作台自动生成，全部评级、仓位、估值结论均为 config/ 铁则层规则的程序化执行结果，
+仅为个人研究记录与策略框架支撑，不构成任何证券投资建议或买卖推荐。市场有风险，决策需独立判断并自担后果。
+</div></div>
+<div class="pdf-footer">A股市场日报 2026-07-07 ｜ 生成日期 2026-07-07 21:59 ｜ 投资研究工作台 · 仅研究分析不构成投资建议</div>
+</body></html>

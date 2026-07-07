@@ -50,13 +50,113 @@ def _total_turnover(snapshot: dict) -> float | None:
     return total if found else None
 
 
-def _sector_strength(snapshot: dict, top_n: int = 5) -> dict:
-    """板块强弱排序：按涨跌幅取前/后N。"""
+def _sector_strength(snapshot: dict, top_n: int = 10) -> dict:
+    """
+    板块强弱排序（v4.5.0修复）：
+    - 涨幅榜=涨跌幅>0降序Top10；不足10个如实列示并标注，不凑数、不生成伪领涨；
+    - 跌幅榜=涨跌幅<0升序（跌最深在前）Top10，同样不凑数；
+    - 逻辑标签由涨跌幅分档数据生成（非叙事）。
+    """
     boards = snapshot.get("board_ranks") or []
     valid = [b for b in boards if to_float(b.get("涨跌幅")) is not None]
-    ordered = sorted(valid, key=lambda b: to_float(b.get("涨跌幅")), reverse=True)
-    return {"top": ordered[:top_n], "bottom": ordered[-top_n:][::-1],
-            "source_note": (ordered[0].get("数据源") if ordered and ordered[0].get("数据源") else "东方财富行业板块")}
+    gainers = sorted([b for b in valid if to_float(b["涨跌幅"]) > 0],
+                     key=lambda b: to_float(b["涨跌幅"]), reverse=True)
+    losers = sorted([b for b in valid if to_float(b["涨跌幅"]) < 0],
+                    key=lambda b: to_float(b["涨跌幅"]))   # 升序=跌最深在前
+
+    def tag_up(pct):
+        return "强势领涨" if pct >= 3 else "温和走强" if pct >= 1 else "小幅收红"
+
+    def tag_down(pct):
+        return "深度杀跌" if pct <= -3 else "明显走弱" if pct <= -1 else "小幅收绿"
+
+    top = [{**b, "标签": tag_up(to_float(b["涨跌幅"]))} for b in gainers[:top_n]]
+    bottom = [{**b, "标签": tag_down(to_float(b["涨跌幅"]))} for b in losers[:top_n]]
+    return {"top": top, "bottom": bottom,
+            "gainer_count": len(gainers), "loser_count": len(losers),
+            "top_shortage": len(gainers) < top_n,
+            "bottom_shortage": len(losers) < top_n,
+            "source_note": (valid[0].get("数据源") if valid and valid[0].get("数据源") else "东方财富行业板块")}
+
+
+def _scenario_forecast(snapshot: dict) -> dict:
+    """
+    下一交易日三情景框架（v4.5.0模块七）：
+    区间=上证近20日日收益率σ量化推导（乐观[+0.5σ,+2σ]/中性[±σ]/悲观[-2σ,-0.5σ]），
+    概率为固定观察框架25/50/25。显著口径：波动率推导的观察区间，非行情预测。
+    """
+    sh_close = next((to_float(r.get("最新价")) for r in (snapshot.get("index_spot") or [])
+                     if r.get("名称") == "上证指数"), None)
+    vol = safe_get(snapshot, "volatility_gauge", "数值")
+    if not sh_close:
+        return {"available": False, "note": "上证收盘数据缺失，情景框架不可用"}
+    sigma = (vol / (252 ** 0.5)) if vol else 0.01   # 年化波动率→日σ；缺失时按1%保守值
+    def rng(a, b):
+        return [round(sh_close * (1 + a * sigma)), round(sh_close * (1 + b * sigma))]
+    return {"available": True, "base": sh_close, "daily_sigma": sigma,
+            "scenarios": [
+                {"名称": "乐观", "概率": "25%", "区间": rng(0.5, 2.0),
+                 "触发条件": "量能放大且领涨板块延续、两融余额续升、无状态切换级利空"},
+                {"名称": "中性", "概率": "50%", "区间": rng(-1.0, 1.0),
+                 "触发条件": "量能与结构延续当日格局，多空信号维持均衡"},
+                {"名称": "悲观", "概率": "25%", "区间": rng(-2.0, -0.5),
+                 "触发条件": "跌停结构扩大、成交萎缩或利差逼近状态切换线"}],
+            "note": f"区间由日σ={sigma:.2%}（{safe_get(snapshot, 'volatility_gauge', '指标') or 'HV'}折算）推导，"
+                    "概率为固定观察框架——本情景为波动率推导的观察区间，非行情预测"}
+
+
+def _core_conflict(snapshot: dict, sector: dict, sentiment: dict, state_check: dict) -> dict:
+    """当日核心矛盾（v4.5.0模块五）：多空双边证据，逐条带数据，不做无支撑叙事。"""
+    margin = snapshot.get("margin_summary") or {}
+    spread = state_check.get("equity_bond_spread")
+    bull, bear = [], []
+    if sector.get("gainer_count"):
+        strongest = sector["top"][0] if sector["top"] else None
+        bull.append(f"仍有 {sector['gainer_count']} 个板块收涨" +
+                    (f"，{strongest.get('板块名称')} 领涨 {to_float(strongest.get('涨跌幅')):+.2f}%" if strongest else ""))
+    chg = margin.get("沪市10日变化率")
+    if chg is not None:
+        (bull if chg > 0 else bear).append(
+            f"沪市融资余额较10日前 {fmt_pct(chg, signed=True)}（杠杆资金{'仍在加仓' if chg > 0 else '边际收缩'}）")
+    if spread is not None:
+        if spread >= 0.035:
+            bull.append(f"股债利差 {fmt_pct(spread)} 处B中性及以上带，估值性价比未恶化")
+        else:
+            bear.append(f"股债利差 {fmt_pct(spread)} 落入偏高带（<3.5%），指数层面性价比走弱")
+    zt, dt = sentiment.get("涨停家数"), sentiment.get("跌停家数")
+    if zt is not None:
+        (bull if (zt or 0) >= (dt or 0) else bear).append(f"涨停 {zt} 家 vs 跌停 {dt} 家（情绪结构{'偏多' if (zt or 0) >= (dt or 0) else '偏空'}）")
+    ur = sentiment.get("上涨占比")
+    if ur is not None:
+        (bull if ur >= 0.5 else bear).append(f"上涨家数占比 {fmt_pct(ur)}（广度{'占优' if ur >= 0.5 else '偏弱'}）")
+    if sector.get("loser_count"):
+        weakest = sector["bottom"][0] if sector["bottom"] else None
+        bear.append(f"{sector['loser_count']} 个板块收跌" +
+                    (f"，{weakest.get('板块名称')} 领跌 {to_float(weakest.get('涨跌幅')):+.2f}%" if weakest else ""))
+    return {"bull": bull or ["当日无可量化的多头证据"],
+            "bear": bear or ["当日无可量化的空头证据"],
+            "note": "多空证据均为当日数据直述，市场解读以体系状态判定为准"}
+
+
+def _index_spotlight(snapshot: dict) -> dict:
+    """重点指数专项（v4.5.0模块六）：自动选当日最强/最弱指数做数据拆解。"""
+    rows = [{"名称": r.get("名称"), "pct": to_float(r.get("涨跌幅")),
+             "close": to_float(r.get("最新价")), "amount": to_float(r.get("成交额"))}
+            for r in (snapshot.get("index_spot") or []) if to_float(r.get("涨跌幅")) is not None]
+    if not rows:
+        return {"available": False}
+    strongest = max(rows, key=lambda r: r["pct"])
+    weakest = min(rows, key=lambda r: r["pct"])
+
+    def brief(r, role):
+        return {"角色": role, "名称": r["名称"], "收盘": r["close"],
+                "涨跌幅": r["pct"], "成交额": r["amount"],
+                "要点": [f"收盘 {r['close']}，当日 {r['pct']:+.2f}%",
+                       f"成交额 {fmt_yi(r['amount'])}",
+                       f"在六大指数中当日表现{'最强' if role == '最强' else '最弱'}"]}
+    return {"available": True, "strongest": brief(strongest, "最强"),
+            "weakest": brief(weakest, "最弱"),
+            "note": "专项拆解为当日快照数据描述；跨日趋势对比随成交额历史序列累积补全"}
 
 
 def _sentiment(snapshot: dict) -> dict:
@@ -312,17 +412,25 @@ def analyze_market(snapshot: dict, config: dict | None = None) -> dict:
     config = config or load_config()
     sentiment = _sentiment(snapshot)
     state_check = check_market_state(snapshot, config)
+    sector = _sector_strength(snapshot)
+    # 极端行情标注（v4.5.0）：涨跌停结构异常时提示数据参考性下降
+    zt, dt = sentiment.get("涨停家数") or 0, sentiment.get("跌停家数") or 0
+    extreme = (zt + dt > 200) or (zt > 100) or (dt > 100)
     return {
         "date": snapshot.get("date"),
         "index_summary": _index_summary(snapshot),
         "total_turnover": _total_turnover(snapshot),
-        "sector": _sector_strength(snapshot),
+        "sector": sector,
         "sentiment": sentiment,
         "state_check": state_check,
         "position": _position_constraints(state_check, config),
         "alerts": _risk_alerts(snapshot, state_check, sentiment),
         "capital_flow": {"margin": snapshot.get("margin_summary") or {},
                          "lhb": (snapshot.get("lhb") or [])[:10]},
+        "scenario": _scenario_forecast(snapshot),          # v4.5.0 模块七
+        "conflict": _core_conflict(snapshot, sector, sentiment, state_check),   # 模块五
+        "spotlight": _index_spotlight(snapshot),           # 模块六
+        "extreme_market": extreme,
         "volatility": snapshot.get("volatility_gauge"),
         "csindex_pe": snapshot.get("csindex_pe"),
         "cn10y_yield": snapshot.get("cn10y_yield"),

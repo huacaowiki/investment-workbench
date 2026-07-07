@@ -30,9 +30,10 @@ def _update_index(folder: Path, entry_line: str, title: str):
 
 
 def _write_formats(folder: Path, stem: str, markdown: str, title: str,
-                   output_format: str) -> dict:
+                   output_format: str, html: str | None = None) -> dict:
     """
     按格式规则落盘。返回 {"md": Path, "html": Path|None, "pdf": Path|None, "notes": [...]}。
+    html 参数：v4.5.0看板渲染器预构建的HTML（优先使用）；缺省回退 md→html 转换通道。
     任何格式转换失败都不影响已生成的其他格式（降级提示）。
     """
     fmt = (output_format or DEFAULT_FORMAT).lower()
@@ -41,8 +42,9 @@ def _write_formats(folder: Path, stem: str, markdown: str, title: str,
 
     if fmt in ("html", "pdf", "all"):
         try:
-            from src.generator.html_writer import markdown_to_html
-            html = markdown_to_html(markdown, title)
+            if html is None:
+                from src.generator.html_writer import markdown_to_html
+                html = markdown_to_html(markdown, title)
             out["html"] = write_text(folder / f"{stem}.html", html)
         except Exception as exc:  # noqa: BLE001 —— 格式转换失败降级为MD
             out["notes"].append(f"HTML生成失败（已保留MD）：{type(exc).__name__}: {exc}")
@@ -51,6 +53,8 @@ def _write_formats(folder: Path, stem: str, markdown: str, title: str,
         ok, note = html_to_pdf(out["html"], folder / f"{stem}.pdf")
         if ok:
             out["pdf"] = folder / f"{stem}.pdf"
+        else:
+            note += "；备用方案：浏览器打开HTML → Ctrl+P → 另存为PDF（样式一致）"
         out["notes"].append(note)
     return out
 
@@ -61,12 +65,13 @@ def _primary(paths: dict) -> Path:
 
 
 def archive_daily_report(markdown: str, meta: dict,
-                         output_format: str = DEFAULT_FORMAT) -> Path:
+                         output_format: str = DEFAULT_FORMAT,
+                         html: str | None = None) -> Path:
     """归档市场日报（MD必落盘 + 按格式追加HTML/PDF），返回主文件路径。"""
     day = meta.get("date") or datetime.now().strftime("%Y%m%d")
     folder = ensure_dir(DIRS["output_daily"])
     title = f"A股市场日报 {day}"
-    paths = _write_formats(folder, f"市场日报_{day}", markdown, title, output_format)
+    paths = _write_formats(folder, f"市场日报_{day}", markdown, title, output_format, html=html)
     meta = {**meta, "formats": {k: str(v) for k, v in paths.items() if k != "notes" and v},
             "format_notes": paths["notes"]}
     write_json(folder / "meta" / f"市场日报_{day}.json", meta)
@@ -76,14 +81,15 @@ def archive_daily_report(markdown: str, meta: dict,
 
 
 def archive_stock_report(markdown: str, meta: dict,
-                         output_format: str = DEFAULT_FORMAT) -> Path:
+                         output_format: str = DEFAULT_FORMAT,
+                         html: str | None = None) -> Path:
     """归档个股分析报告（多格式），返回主文件路径。"""
     day = meta.get("date") or datetime.now().strftime("%Y%m%d")
     code = meta.get("code", "unknown")
     name = (meta.get("name") or "").replace("/", "-") or "未知"
     folder = ensure_dir(DIRS["output_stock"])
     title = f"个股分析报告 {name}（{code}）{day}"
-    paths = _write_formats(folder, f"个股_{code}_{name}_{day}", markdown, title, output_format)
+    paths = _write_formats(folder, f"个股_{code}_{name}_{day}", markdown, title, output_format, html=html)
     meta = {**meta, "formats": {k: str(v) for k, v in paths.items() if k != "notes" and v},
             "format_notes": paths["notes"]}
     write_json(folder / "meta" / f"个股_{code}_{day}.json", meta)

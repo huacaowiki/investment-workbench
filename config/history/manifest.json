@@ -43,6 +43,17 @@
         "valuation_model.yaml",
         "risk_control.yaml"
       ]
+    },
+    {
+      "version_id": "v005_20260707_211631",
+      "date": "2026-07-07 21:16:31",
+      "note": "v4.4.0评分映射与新股否决写入前备份",
+      "files": [
+        "investment_system.yaml",
+        "stock_selection.yaml",
+        "valuation_model.yaml",
+        "risk_control.yaml"
+      ]
     }
   ]
 }

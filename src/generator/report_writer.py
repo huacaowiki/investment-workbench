@@ -48,6 +48,42 @@ def _config_version() -> str:
         return "?"
 
 
+def _render_daily_headline_md(analysis: dict) -> str:
+    from src.generator.html_report import _daily_headline
+    head = _daily_headline(analysis.get("index_summary") or [],
+                           analysis.get("sentiment") or {}, analysis.get("sector") or {})
+    extreme = "\n\n> ⚠️ 今日行情极端（涨跌停结构异常），数据参考性下降" \
+        if analysis.get("extreme_market") else ""
+    return f"**{head}**{extreme}"
+
+
+def _render_conflict_md(conflict: dict) -> str:
+    if not conflict:
+        return "_暂无数据_"
+    return ("**多头证据**\n" + "\n".join(f"- {p}" for p in conflict.get("bull", [])) +
+            "\n\n**空头证据**\n" + "\n".join(f"- {p}" for p in conflict.get("bear", [])) +
+            f"\n\n> {conflict.get('note', '')}")
+
+
+def _render_spotlight_md(spot: dict) -> str:
+    if not spot.get("available"):
+        return "_指数数据缺失，专项分析不可用_"
+    def block(s):
+        return f"**当日{s['角色']}：{s['名称']}（{s['涨跌幅']:+.2f}%）**\n" + \
+               "\n".join(f"- {p}" for p in s["要点"])
+    return block(spot["strongest"]) + "\n\n" + block(spot["weakest"]) + \
+        f"\n\n> {spot.get('note', '')}"
+
+
+def _render_scenario_md(scen: dict) -> str:
+    if not scen.get("available"):
+        return f"_{scen.get('note', '情景框架不可用')}_"
+    md = _table(["情景", "概率", "上证区间", "触发条件"],
+                [[s["名称"], s["概率"], f"{s['区间'][0]}~{s['区间'][1]}", s["触发条件"]]
+                 for s in scen.get("scenarios", [])])
+    return md + f"\n\n> {scen.get('note', '')}"
+
+
 # =============================================================================
 # 市场日报
 # =============================================================================
@@ -138,6 +174,10 @@ def render_daily_report(analysis: dict,
         risk_alerts_section=alerts_md,
         data_quality_section="\n".join(quality_lines),
         self_check_section=_render_self_check(self_check),
+        headline_section=_render_daily_headline_md(analysis),
+        conflict_section=_render_conflict_md(analysis.get("conflict") or {}),
+        spotlight_section=_render_spotlight_md(analysis.get("spotlight") or {}),
+        scenario_section=_render_scenario_md(analysis.get("scenario") or {}),
     ))
 
     meta = {
@@ -218,6 +258,101 @@ def _render_risk_matrix(matrix: dict | None) -> str:
         lines.extend(f"- [{r['级别']}] {r['内容']}" for r in items)
         lines.append("")
     return "\n".join(lines).strip()
+
+
+def _render_rating_md(rating: dict) -> str:
+    """裁决区MD渲染（v4.4.0，与看板同一结果对象）。"""
+    if not rating:
+        return "_评级引擎未执行_"
+    pos = rating.get("建议仓位上限") or {}
+    entry, target = rating.get("入场价区间"), rating.get("目标价区间")
+    rows = [
+        ["综合评级", f"**{rating.get('评级', '—')}**（{rating.get('评级依据', '')}）"],
+        ["综合得分", f"{rating.get('综合得分', '—')}/100 ｜ 标的池等级：{rating.get('pool_level', '—')}"],
+        ["估值定性", f"{rating.get('估值定性', '—')}（{rating.get('估值定性依据', '')}）"],
+        ["入场价区间", f"{entry[0]}~{entry[1]}" if entry else "暂无数据（多锚未加权/不可用）"],
+        ["目标价区间", f"{target[0]}~{target[1]}" if target else "暂无数据"],
+        ["潜在上行空间", fmt_pct(rating.get("潜在上行空间")) if rating.get("潜在上行空间") is not None else "暂无数据"],
+        ["止损参考", f"{rating.get('止损参考', '—')}（体系-15%硬止损，§3.2）"],
+        ["建议仓位上限", f"择时 {fmt_pct(safe_get(pos, '择时组合'))} / 股息 {fmt_pct(safe_get(pos, '股息组合'))}（{pos.get('口径', '')}）"],
+        ["盈亏比", rating.get("盈亏比") or "暂无数据"],
+        ["持有周期", rating.get("持有周期", "—")],
+        ["信心水平", f"{rating.get('信心水平', '—')}（{rating.get('信心口径', '')}）"],
+    ]
+    md = _table(["参数", "值"], rows)
+    if rating.get("gate_reason"):
+        md = f"> ⛔ **{rating['gate_reason']}**\n\n" + md
+    elif rating.get("门槛提示") and "⚠️" in str(rating.get("门槛提示")):
+        md = f"> {rating['门槛提示']}\n\n" + md
+    dims = rating.get("维度得分") or {}
+    srows = [[d, n, f"{i['得分']:g}/{i['满分']:g}", i["依据"]]
+             for d, dd in dims.items() for n, i in (dd.get("items") or {}).items()]
+    if srows:
+        md += "\n\n**评分明细（PASS=满分/FAIL·缺失=0，config composite_scoring）**\n\n" + \
+              _table(["维度", "计分项", "得分", "依据"], srows)
+    return md
+
+
+def _render_tech_md(tech: dict) -> str:
+    if not tech or not tech.get("available"):
+        return f"> {(tech or {}).get('note', '技术面不可用')}"
+    md = _table(["维度", "方向", "量化描述"],
+                [[t["维度"], t["方向"], t["描述"]] for t in tech["trend"]])
+    lv = [[s["档位"], s["价位"], s["依据"]] for s in tech["supports"]] + \
+         [[r["档位"], r["价位"], r["依据"]] for r in tech["resistances"]]
+    md += "\n\n**关键价位表**\n\n" + _table(["档位", "价位", "依据"], lv)
+    return md + f"\n\n> {tech.get('note', '')}"
+
+
+def _render_fundamental_md(snap: dict) -> str:
+    detail = safe_get(snap, "cashflow_ratios", "基本面明细") or []
+    if not detail:
+        return "_基本面明细数据缺失（新浪年报接口不可用）_"
+    rows = []
+    for i, d in enumerate(detail):
+        prev = detail[i - 1] if i else {}
+        def cell(k):
+            v, p = d.get(k), prev.get(k)
+            yoy = f"（{(v - p) / abs(p):+.1%}）" if (v is not None and p) else ""
+            return f"{fmt_yi(v)}{yoy}"
+        rows.append([d.get("年度"), cell("营收"), cell("毛利"), cell("净利润"),
+                     cell("研发费用"), cell("经营现金流")])
+    return _table(["年度", "营收", "毛利", "净利润", "研发费用", "经营现金流"], rows)
+
+
+def _render_bull_bear_md(snap: dict, result: dict) -> str:
+    from src.generator.html_report import _stock_bull_bear
+    bull, bear = _stock_bull_bear(snap, result)
+    return ("**多头核心逻辑**\n" + "\n".join(f"- {p}（权重{w}）" for p, w in bull) +
+            "\n\n**空头核心逻辑**\n" + "\n".join(f"- {p}（权重{w}）" for p, w in bear) +
+            "\n\n> 权重=证据强度工程分（数据驱动可验算），非主观观点")
+
+
+def _render_action_plan_md(result: dict) -> str:
+    risk = result.get("risk") or {}
+    rating = result.get("rating") or {}
+    sl, tp = risk.get("止损参考价") or {}, risk.get("止盈参考价") or {}
+    entry = rating.get("入场价区间")
+    md = ("**分批建仓（30/30/40，§3.1/§3.2）**\n\n" + _table(
+        ["批次", "触发条件", "成本区间"],
+        [["首仓30%", "门槛全过+评分≥3+决策卡片+24h冷静期", f"{entry[0]}~{entry[1]}" if entry else "多锚区间不可用"],
+         ["二仓30%", "较首仓跌≥5% 或 横盘≥2周放量突破", "首仓成本-5%附近"],
+         ["三仓40%", "较首仓跌≥8% 且逻辑未变", "首仓成本-8%附近"]]) +
+        "\n\n**止盈止损**\n\n" + _table(
+        ["场景", "触发", "操作"],
+        [["止损一档", "-10%", f"减仓50%（{sl.get('-10%减仓50%', '—')}）"],
+         ["止损二档", "-15%", f"无条件清仓（{sl.get('-15%无条件清仓', '—')}）"],
+         ["止盈一档", "+20%/达目标价", f"减1/3（{tp.get('+20%减持1/3', '—')}）"],
+         ["止盈二档", "+40%/PE历史70%分位", f"再减1/3（{tp.get('+40%再减1/3', '—')}）"],
+         ["移动止盈", "高点回落≥8%/放量滞涨", "清仓剩余"],
+         ["时间止损", "3月/6月/12月", "减50%/清仓/强制重评"]]))
+    return md + f"\n\n> 仅当评级∈{{买入,逢低建仓}}且完成决策卡片后适用；当前评级：**{rating.get('评级', '—')}**"
+
+
+def _render_nodes_md(snap: dict) -> str:
+    from src.generator.html_report import _verification_nodes
+    return "\n".join(f"- **{n['时间']}** ｜ {n['事件']} —— {n['验证逻辑']}"
+                     for n in _verification_nodes(snap))
 
 
 def render_stock_report(snap: dict, result: dict,
@@ -314,6 +449,12 @@ def render_stock_report(snap: dict, result: dict,
         multi_valuation_section=_render_multi_valuation(result.get("multi_valuation")),
         risk_matrix_section=_render_risk_matrix(result.get("risk_matrix")),
         self_check_section=_render_self_check(self_check),
+        rating_section=_render_rating_md(result.get("rating") or {}),
+        tech_section=_render_tech_md(result.get("technicals") or {}),
+        fundamental_section=_render_fundamental_md(snap),
+        bull_bear_section=_render_bull_bear_md(snap, result),
+        action_plan_section=_render_action_plan_md(result),
+        nodes_section=_render_nodes_md(snap),
     ))
 
     meta = {
@@ -327,6 +468,8 @@ def render_stock_report(snap: dict, result: dict,
         "overall": result["overall"],
         "timing_auto_score": t["auto_score_floor"],
         "assumption_count": len(result["assumptions"]),
+        "rating": {k: safe_get(result, "rating", k) for k in
+                   ("评级", "综合得分", "估值定性", "pool_level")},
         "multi_valuation": {
             "val_class": safe_get(result, "multi_valuation", "val_class"),
             "combined": safe_get(result, "multi_valuation", "combined"),

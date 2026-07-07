@@ -1,7 +1,7 @@
 {
   "type": "daily_market",
   "date": "20260707",
-  "generated_at": "2026-07-07T15:32:58.585219",
+  "generated_at": "2026-07-07T21:59:13.981277",
   "index": {
     "上证指数": {
       "close": 3990.2353,
@@ -30,19 +30,18 @@
   },
   "total_turnover": 2581148551908.0,
   "sentiment_score": 4.3,
-  "top_sectors": [
-    "供水供气",
-    "次新股",
-    "公路桥梁",
-    "电子信息",
-    "机械行业"
-  ],
+  "top_sectors": [],
   "bottom_sectors": [
     "纺织机械",
     "摩托车",
     "发电设备",
     "综合行业",
-    "医疗器械"
+    "医疗器械",
+    "飞机制造",
+    "化纤行业",
+    "煤炭行业",
+    "生物制药",
+    "农药化肥"
   ],
   "effective_state": "B_high",
   "auto_state": "B_high",
@@ -54,12 +53,10 @@
   "alerts": [
     {
       "级别": "P3",
-      "内容": "数据缺失项：lhb（分析已按缺失处理）"
+      "内容": "无体系规则相关的风险触发"
     }
   ],
-  "data_errors": [
-    "lhb"
-  ],
+  "data_errors": [],
   "formats": {
     "md": "E:\\oneDrive\\investment-workbench\\investment-workbench\\output\\daily_market\\市场日报_20260707.md",
     "html": "E:\\oneDrive\\investment-workbench\\investment-workbench\\output\\daily_market\\市场日报_20260707.html",

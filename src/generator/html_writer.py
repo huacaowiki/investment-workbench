@@ -20,7 +20,8 @@ from pathlib import Path
 CLAUDE_CSS = """
 :root {
   --bg: #F7F7F8; --card: #FFFFFF; --primary: #4F46E5;
-  --text: #1F2937; --muted: #6B7280; --up: #059669; --down: #DC2626;
+  --text: #1F2937; --muted: #6B7280;
+  --up: #DC2626; --down: #059669;   /* A股习惯：红涨绿跌（v4.5.0全局翻转） */
   --warn-bg: #FFF7ED; --warn-fg: #C2410C; --border: #E5E7EB;
 }
 * { box-sizing: border-box; }

@@ -184,6 +184,35 @@ def tech_bottom_signal(closes: list) -> dict:
             "口径": "替代量化口径（v4.2.0裁决#5）：RSI14<30近20日 且 MACD零轴下金叉近15日"}
 
 
+def kdj_series(highs: list, lows: list, closes: list, n: int = 9):
+    """KDJ(9,3,3)：返回最新 (K, D, J)；样本不足返回 (None, None, None)。"""
+    h = [to_float(x) for x in highs]
+    l = [to_float(x) for x in lows]
+    c = [to_float(x) for x in closes]
+    if len(c) < n + 1 or any(v is None for v in (h[-1], l[-1], c[-1])):
+        return None, None, None
+    k, d = 50.0, 50.0
+    for i in range(n - 1, len(c)):
+        hh = max(x for x in h[i - n + 1:i + 1] if x is not None)
+        ll = min(x for x in l[i - n + 1:i + 1] if x is not None)
+        rsv = 50.0 if hh == ll else (c[i] - ll) / (hh - ll) * 100
+        k = 2 / 3 * k + 1 / 3 * rsv
+        d = 2 / 3 * d + 1 / 3 * k
+    return round(k, 1), round(d, 1), round(3 * k - 2 * d, 1)
+
+
+def boll_bands(closes: list, window: int = 20, num_std: float = 2.0):
+    """BOLL(20,2)：返回 (下轨, 中轨, 上轨)；样本不足返回 (None,)*3。"""
+    c = [to_float(x) for x in closes if to_float(x) is not None]
+    if len(c) < window:
+        return None, None, None
+    tail = c[-window:]
+    mid = sum(tail) / window
+    var = sum((x - mid) ** 2 for x in tail) / window
+    std = math.sqrt(var)
+    return round(mid - num_std * std, 2), round(mid, 2), round(mid + num_std * std, 2)
+
+
 def days_above_ma(closes: list, window: int = 60) -> int:
     """收盘连续站上 window 日均线的天数（右侧确认口径：≥3日记1分）。"""
     c = [to_float(x) for x in closes if to_float(x) is not None]
