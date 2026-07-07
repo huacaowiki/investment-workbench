@@ -14,6 +14,9 @@ run.py — 投资研究工作台一键入口
   python run.py watchlist list        查看择时备选池
   python run.py watchlist add 600519  加入备选池（入池即承担研究笔记义务）
   python run.py watchlist remove 600519
+
+每条命令执行完毕后自动 git add+commit+push 到 GitHub（双电脑无缝同步，无需手动操作）；
+如需临时跳过同步（如离线环境），在命令末尾加 --no-sync。
 """
 from __future__ import annotations
 
@@ -176,11 +179,30 @@ def cmd_watchlist(action: str, code: str | None = None):
         print("❌ 用法：python run.py watchlist list|add|remove [代码]")
 
 
+def _sync_after(cmd: str):
+    """
+    命令执行后自动提交+推送到GitHub（用户2026-07-07授权的标准行为，无需逐次确认）。
+    仅同步git跟踪范围内的变更（报告/配置/代码等）；data/缓存等被.gitignore排除的
+    内容由OneDrive的实时文件同步负责，两者互补。同步失败不影响命令本身已完成的结果。
+    """
+    try:
+        from src.utils.git_sync import auto_sync
+        result = auto_sync(f"run.py {cmd}")
+        if result["committed"]:
+            icon = "🔄" if result["pushed"] else "⚠️"
+            print(f"{icon} Git同步：{result['note']}")
+    except Exception as exc:  # noqa: BLE001 —— 同步失败绝不能掩盖命令本身的结果
+        print(f"⚠️ Git同步异常（不影响本次操作结果）：{exc}")
+
+
 def main():
     if len(sys.argv) < 2:
         print(__doc__)
         sys.exit(0)
     cmd, args = sys.argv[1], sys.argv[2:]
+    no_sync = "--no-sync" in args
+    if no_sync:
+        args = [a for a in args if a != "--no-sync"]
     dispatch = {
         "daily": lambda: cmd_daily(args[0] if args else None),
         "stock": lambda: cmd_stock(args[0]) if args else print("❌ 用法：python run.py stock <代码>"),
@@ -197,6 +219,8 @@ def main():
         print(f"❌ 未知命令 {cmd}\n{__doc__}")
         sys.exit(1)
     dispatch[cmd]()
+    if not no_sync:
+        _sync_after(cmd)
 
 
 if __name__ == "__main__":
