@@ -136,16 +136,19 @@ def check_market_state(snapshot: dict, config: dict) -> dict:
     add("A区", "股债利差>5%", v,
         f"利差 {fmt_pct(spread)}（1/PE {fmt_pct(1/cs_pe) if cs_pe else '—'} − 国债 {fmt_pct(cn10y)}）"
         if spread is not None else "数据缺失")
+    # 漏洞修复#8（2026-07-07审计）："连续10日"条件在样本<10日时不计入命中数——
+    # 此前样本不足也计分，单日盘中/低量样本曾导致误命中；现严格按字面口径，样本不足仅展示趋势
     recent10 = [h["turnover"] for h in history[-10:] if h.get("turnover")]
     if len(recent10) >= 10:
         v = all(t < 7e11 for t in recent10)
-        low_note = "自建序列样本充足"
+        low_note = "自建序列样本充足（10日）"
+        a_hits += 1 if v else 0
     elif recent10:
-        v = all(t < 7e11 for t in recent10)
-        low_note = f"自建序列仅{len(recent10)}日样本（<10日），判定随样本累积收敛"
+        v = None   # 样本不足：不判定、不计分
+        low_note = (f"自建序列仅{len(recent10)}日样本（<10日），连续性条件不参与计分，"
+                    f"当前样本趋势：{'全部<7000亿' if all(t < 7e11 for t in recent10) else '存在≥7000亿'}")
     else:
-        v, low_note = None, "无成交额历史样本"
-    a_hits += 1 if v else 0
+        v, low_note = None, "无成交额历史样本，不参与计分"
     add("A区", "日成交额连续10日<7000亿", v,
         f"近{len(recent10)}日成交额 {['%.0f亿' % (t/1e8) for t in recent10[-3:]]}…" if recent10 else "数据缺失",
         low_note + "；换手率半边无公开序列，按成交额半边判定")
@@ -159,13 +162,18 @@ def check_market_state(snapshot: dict, config: dict) -> dict:
     add("C区", "上证逼近/突破历史高点（≥历史最高×95%）", v,
         f"收盘 {sh_close} vs 历史最高 {sh_high}" if (sh_close and sh_high) else "数据缺失")
     recent5 = [h["turnover"] for h in history[-5:] if h.get("turnover")]
-    v = (len(recent5) >= 5 and all(t > 1.5e12 for t in recent5)) if recent5 else None
-    if recent5 and len(recent5) < 5:
+    if len(recent5) >= 5:   # 漏洞修复#8同口径：样本<5日不判定不计分
         v = all(t > 1.5e12 for t in recent5)
-    c_hits += 1 if v else 0
+        c_hits += 1 if v else 0
+        c5_note = "样本充足（5日）"
+    else:
+        v = None
+        c5_note = (f"样本仅{len(recent5)}日（<5日），连续性条件不参与计分" +
+                   (f"，当前样本趋势：{'全部>1.5万亿' if recent5 and all(t > 1.5e12 for t in recent5) else '未全部>1.5万亿'}"
+                    if recent5 else ""))
     add("C区", "日成交额连续5日>1.5万亿", v,
         f"近{len(recent5)}日样本" if recent5 else "数据缺失",
-        "恐惧贪婪指数无可编程源，取原文并列可测部分（裁决#2）")
+        c5_note + "；恐惧贪婪指数无可编程源，取原文并列可测部分（裁决#2）")
     v = (spread < 0.02) if spread is not None else None
     c_hits += 1 if v else 0
     add("C区", "股债利差<2%", v, f"利差 {fmt_pct(spread)}" if spread is not None else "数据缺失")
@@ -278,8 +286,15 @@ def _risk_alerts(snapshot: dict, state_check: dict, sentiment: dict) -> list[dic
         alerts.append({"级别": "P1", "内容":
                        f"市场状态为C区·高估（{state_check.get('note')}）：择时只卖不买降至20%以下；"
                        "股息暂停买入并逐票执行估值卖出检查（v4.2.0裁决#10）"})
+    # 漏洞修复#9：宏观风险覆盖补全——股债利差逼近C区条件、跌停极端结构分级
+    spread = state_check.get("equity_bond_spread")
+    if spread is not None and spread < 0.025:
+        alerts.append({"级别": "P2", "内容":
+                       f"股债利差 {fmt_pct(spread)} 已逼近C区条件'<2%'（§1.3），估值性价比趋弱，关注状态切换"})
     dt = sentiment.get("跌停家数")
-    if dt is not None and dt > 30:
+    if dt is not None and dt > 50:
+        alerts.append({"级别": "P2", "内容": f"当日跌停 {int(dt)} 家（极端结构），§3.5异常预案：单日账户亏损>5%当日不操作"})
+    elif dt is not None and dt > 30:
         alerts.append({"级别": "P3", "内容": f"当日跌停 {int(dt)} 家，情绪偏弱，注意§3.5异常预案（大盘单日跌幅>5%不恐慌卖出）"})
     if snapshot.get("errors"):
         alerts.append({"级别": "P3", "内容": f"数据缺失项：{', '.join(snapshot['errors'])}（分析已按缺失处理）"})

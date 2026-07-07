@@ -2,9 +2,10 @@
 """
 run.py — 投资研究工作台一键入口
 用法：
-  python run.py daily                  生成当日市场日报
+  python run.py daily                  生成当日市场日报（默认HTML+MD，v4.3.0）
   python run.py daily 20260401        生成指定日期市场日报（历史统计类数据以当日可得为准）
-  python run.py stock 600519          生成个股分析报告
+  python run.py stock 600519          生成个股分析报告（默认HTML+MD）
+  python run.py stock 600519 --format all    额外生成PDF（可选 md|html|pdf|all）
   python run.py monthly [2026-06]     月度体系迭代（只出草案，绝不改config）
   python run.py quarterly [2026-Q2]   季度深度迭代（只出草案）
   python run.py backup-config [备注]   备份当前config到config/history
@@ -31,12 +32,14 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() not in ("utf-8", "utf8"):
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 
 
-def cmd_daily(day: str | None = None):
-    """市场日报全链路：拉数 → 分析 → 渲染 → 归档。"""
+def cmd_daily(day: str | None = None, output_format: str = "html"):
+    """市场日报全链路：拉数 → 分析 → 自检 → 渲染 → 归档（默认HTML，v4.3.0）。"""
     from src.data.market_data import get_market_snapshot
     from src.analyzer.market_analyzer import analyze_market
+    from src.analyzer.self_check import check_daily_result
     from src.generator.report_writer import render_daily_report
     from src.generator.archiver import archive_daily_report
+    from src.utils.file_utils import load_config
 
     print("① 拉取市场数据……")
     snap = get_market_snapshot(day=day)
@@ -44,38 +47,57 @@ def cmd_daily(day: str | None = None):
         print(f"   ⚠️ 部分数据缺失：{list(snap['errors'])}（按缺失处理，不影响出报）")
     print("② 执行市场分析（严格对照 config 铁则）……")
     analysis = analyze_market(snap)
-    print("③ 渲染并归档报告……")
-    md, meta = render_daily_report(analysis)
-    path = archive_daily_report(md, meta)
+    warnings = check_daily_result(analysis, load_config())
+    if warnings:
+        print(f"   ⚠️ 逻辑自检发现 {len(warnings)} 条预警（已写入报告第九节）")
+    print(f"③ 渲染并归档报告（格式：{output_format}）……")
+    md, meta = render_daily_report(analysis, self_check=warnings)
+    path = archive_daily_report(md, meta, output_format=output_format)
     print(f"✅ 市场日报已生成：{path}")
-    print(f"   情绪观察分：{meta['sentiment_score']}/10 ｜ 市场状态：{meta['effective_state'] or '未判定（请周日人工判定后 python run.py set-state <状态>）'}")
+    for note in meta.get("format_notes", []):
+        print(f"   ℹ️ {note}")
+    score = meta['sentiment_score']
+    print(f"   情绪观察分：{score if score is not None else '—'}/10 ｜ "
+          f"市场状态：{meta['effective_state'] or '未判定（judge-state 补数或 set-state 人工判定）'}")
     for a in meta["alerts"][:3]:
         print(f"   [{a['级别']}] {a['内容'][:60]}")
     return path
 
 
-def cmd_stock(code: str):
-    """个股分析全链路：拉数 → 规则判定 → 渲染 → 归档。"""
+def cmd_stock(code: str, output_format: str = "html"):
+    """个股分析全链路：拉数 → 规则判定 → 自检 → 渲染 → 归档（默认HTML，v4.3.0）。"""
     from src.data.stock_data import get_stock_snapshot
     from src.analyzer.market_analyzer import MARKET_STATE_FILE
+    from src.analyzer.self_check import check_stock_result
     from src.analyzer.stock_analyzer import analyze_stock
     from src.generator.report_writer import render_stock_report
     from src.generator.archiver import archive_stock_report
-    from src.utils.file_utils import read_json
+    from src.utils.file_utils import load_config, read_json
 
     print(f"① 拉取个股数据（{code}）……")
     snap = get_stock_snapshot(code)
     if snap["errors"]:
         print(f"   ⚠️ 部分数据缺失：{list(snap['errors'])}")
     state = (read_json(MARKET_STATE_FILE) or {}).get("state")
-    print("② 对照选股/估值/风控规则逐项判定……")
+    print("② 对照选股/估值/风控规则逐项判定（含多锚估值）……")
     result = analyze_stock(snap, market_state=state)
-    print("③ 渲染并归档报告……")
-    md, meta = render_stock_report(snap, result)
-    path = archive_stock_report(md, meta)
+    warnings = check_stock_result(result, snap, load_config())
+    if warnings:
+        print(f"   ⚠️ 逻辑自检发现 {len(warnings)} 条预警（已写入报告第八节）")
+    print(f"③ 渲染并归档报告（格式：{output_format}）……")
+    md, meta = render_stock_report(snap, result, self_check=warnings)
+    path = archive_stock_report(md, meta, output_format=output_format)
     print(f"✅ 个股报告已生成：{path}")
+    for note in meta.get("format_notes", []):
+        print(f"   ℹ️ {note}")
     print(f"   结论：{result['overall']}")
-    print(f"   推定/口径说明项：{len(result['assumptions'])} 条（详见报告第八节，v4.2.0全自动判定）")
+    mv = result.get("multi_valuation") or {}
+    if mv.get("combined"):
+        c = mv["combined"]
+        print(f"   多锚估值：合理区间 {c['合理区间']} ｜ 安全边际 {c['安全边际价']} ｜ 高估阈 {c['高估阈值']}")
+    elif mv.get("diverged"):
+        print(f"   多锚估值：方法偏差超30%，未加权（详见报告第五节）")
+    print(f"   推定/口径说明项：{len(result['assumptions'])} 条（详见报告第八节）")
     return path
 
 
@@ -203,9 +225,19 @@ def main():
     no_sync = "--no-sync" in args
     if no_sync:
         args = [a for a in args if a != "--no-sync"]
+    # --format md|html|pdf|all（任务三：缺省html；md=仅MD；pdf/all=MD+HTML+PDF）
+    output_format = "html"
+    if "--format" in args:
+        i = args.index("--format")
+        if i + 1 < len(args) and args[i + 1] in ("md", "html", "pdf", "all"):
+            output_format = args[i + 1]
+            args = args[:i] + args[i + 2:]
+        else:
+            print("❌ --format 取值：md | html | pdf | all")
+            sys.exit(1)
     dispatch = {
-        "daily": lambda: cmd_daily(args[0] if args else None),
-        "stock": lambda: cmd_stock(args[0]) if args else print("❌ 用法：python run.py stock <代码>"),
+        "daily": lambda: cmd_daily(args[0] if args else None, output_format),
+        "stock": lambda: cmd_stock(args[0], output_format) if args else print("❌ 用法：python run.py stock <代码>"),
         "monthly": lambda: cmd_monthly(args[0] if args else None),
         "quarterly": lambda: cmd_quarterly(args[0] if args else None),
         "backup-config": lambda: cmd_backup(" ".join(args)),

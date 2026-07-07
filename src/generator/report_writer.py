@@ -9,12 +9,12 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from src.data.data_utils import fmt_pct, fmt_yi, safe_get
+from src.data.data_utils import fmt_num, fmt_pct, fmt_yi, safe_get
 from src.utils.file_utils import DIRS, load_config, read_text
 
 STATE_NAMES = {"A_undervalued": "A区·低估", "B_low": "B偏低", "B_neutral": "B中性",
                "B_high": "B偏高", "C_overvalued": "C区·高估"}
-STATUS_ICON = {"PASS": "✅ 通过", "FAIL": "❌ 不满足", "MISSING": "⚠️ 数据缺失"}
+STATUS_ICON = {"PASS": "✅通过", "FAIL": "❌不满足", "MISSING": "⚠️数据缺失"}   # 无空格防表格窄列折行
 
 
 class _SafeDict(dict):
@@ -52,7 +52,8 @@ def _config_version() -> str:
 # 市场日报
 # =============================================================================
 
-def render_daily_report(analysis: dict) -> tuple[str, dict]:
+def render_daily_report(analysis: dict,
+                        self_check: list[dict] | None = None) -> tuple[str, dict]:
     """渲染市场日报。返回 (markdown文本, meta摘要dict)。"""
     tpl = read_text(DIRS["templates"] / "daily_market_report.md")
 
@@ -136,6 +137,7 @@ def render_daily_report(analysis: dict) -> tuple[str, dict]:
             "\n\n> 严格风控模式（§1.5）触发条件：年度盈利>15% / 进入C区 / 沪深300波动率>35% → 择时仓位上限30%、单票15%、不开新仓",
         risk_alerts_section=alerts_md,
         data_quality_section="\n".join(quality_lines),
+        self_check_section=_render_self_check(self_check),
     ))
 
     meta = {
@@ -160,7 +162,66 @@ def render_daily_report(analysis: dict) -> tuple[str, dict]:
 # 个股报告
 # =============================================================================
 
-def render_stock_report(snap: dict, result: dict) -> tuple[str, dict]:
+def _render_self_check(warnings: list[dict] | None) -> str:
+    """自检预警渲染（任务一自检机制）：无预警时输出通过声明。"""
+    if warnings is None:
+        return "_（本次未执行自检）_"
+    if not warnings:
+        return "✅ 自检通过：分析结论与 config 铁则一致性校验、结论自洽性校验、数值合法性校验、边界口径落实校验全部通过。"
+    return "\n".join(f"- **[{w['级别']}]** {w['内容']}" for w in warnings) + \
+        "\n\n> ⚠️ 存在自检预警时，请优先核实预警项后再参考本报告结论。"
+
+
+def _render_multi_valuation(mv: dict | None) -> str:
+    """多锚估值渲染（任务二）：每方法一行 + 综合区间/偏差说明。"""
+    if not mv or not mv.get("ok"):
+        return f"_多锚估值不可用：{(mv or {}).get('error', '未执行')}_"
+    rows = []
+    for m in mv["methods"]:
+        rows.append([f"{m['方法']}（{m['层级']}）",
+                     f"{m['权重']:.0%}",
+                     ("✅ 可用" if m["可用"] else f"➖ 不可用：{m['不可用原因']}"),
+                     (f"[{m['区间'][0]}, {m['区间'][1]}]" if m["区间"] else "—"),
+                     m["减持阈"] or "—",
+                     m["参数"] if m["可用"] else "—"])
+    md = (f"**行业估值方法集**：{mv.get('val_class_name')}（{mv.get('val_class')}）\n\n"
+          f"> 选型依据：{mv.get('rationale')}\n\n" +
+          _table(["估值方法", "权重", "适用性", "合理区间(元)", "减持阈(元)", "参数与口径"], rows))
+    proc = "\n".join(f"- **{m['方法']}**：{m['过程']}" for m in mv["methods"] if m["可用"])
+    if proc:
+        md += "\n\n**测算过程**\n\n" + proc
+    if mv.get("diverged"):
+        md += (f"\n\n⚠️ **方法间偏差 {fmt_pct(mv.get('divergence_pct'))} 超过30%阈值，不输出加权综合区间**\n\n"
+               + "\n".join(f"> {n}" for n in mv.get("notes", [])))
+    elif mv.get("combined"):
+        c = mv["combined"]
+        md += (f"\n\n**综合估值结论**（方法偏差 {fmt_pct(mv.get('divergence_pct'))} ≤30%，加权口径：{c['权重口径']}）\n\n"
+               f"- 综合合理区间：**[{c['合理区间'][0]}, {c['合理区间'][1]}] 元**\n"
+               f"- 安全边际价（下沿×0.90）：**{c['安全边际价']} 元**\n"
+               f"- 高估阈值（加权减持阈）：**{c['高估阈值']} 元**\n"
+               f"- {c.get('现价位置', '')}")
+    else:
+        md += "\n\n" + "\n".join(f"> {n}" for n in mv.get("notes", []))
+    md += ("\n\n> 说明：多锚区间仅用于研究参考与研究笔记估值锚的交叉验证，"
+           "不改变§2.2/§2.4买卖门槛判定；研究笔记已定义估值锚的标的以研究笔记优先（v4.3.0裁决#13）。")
+    return md
+
+
+def _render_risk_matrix(matrix: dict | None) -> str:
+    """四类风险矩阵渲染（任务一风险完备性修复）。"""
+    if not matrix:
+        return "_风险矩阵未生成_"
+    lines = []
+    for cat in ("宏观", "行业", "公司", "估值"):
+        items = matrix.get(cat) or []
+        lines.append(f"**{cat}风险**")
+        lines.extend(f"- [{r['级别']}] {r['内容']}" for r in items)
+        lines.append("")
+    return "\n".join(lines).strip()
+
+
+def render_stock_report(snap: dict, result: dict,
+                        self_check: list[dict] | None = None) -> tuple[str, dict]:
     """渲染个股分析报告。返回 (markdown文本, meta摘要dict)。"""
     tpl = read_text(DIRS["templates"] / "stock_analysis_report.md")
     basic = snap.get("basic") or {}
@@ -175,8 +236,9 @@ def render_stock_report(snap: dict, result: dict) -> tuple[str, dict]:
         ["总市值", fmt_yi(basic.get("总市值"))],
         ["最新收盘价", quote.get("最新收盘价")],
         ["较1年内高点回撤", fmt_pct(quote.get("较1年内高点回撤"))],
-        ["PE(TTM) / 历史分位", f"{val.get('PE_TTM') or '—'} / {fmt_pct(val.get('PE历史分位'))}（{val.get('分位窗口', '')}）"],
-        ["PB / 历史分位", f"{val.get('PB') or '—'} / {fmt_pct(val.get('PB历史分位'))}"],
+        ["PE(TTM) / 历史分位",
+         f"{fmt_num(val.get('PE_TTM'))} / {fmt_pct(val.get('PE历史分位'))}（{val.get('分位窗口', '')}）"],
+        ["PB / 历史分位", f"{fmt_num(val.get('PB'))} / {fmt_pct(val.get('PB历史分位'))}"],
         ["股息率TTM", fmt_pct(val.get("股息率TTM"))],
         ["ROE近3年均值", f"{fin.get('ROE近3年均值_pct'):.2f}%" if fin.get("ROE近3年均值_pct") is not None else "—"],
         ["连续分红年数", div.get("连续分红年数")],
@@ -249,6 +311,9 @@ def render_stock_report(snap: dict, result: dict) -> tuple[str, dict]:
         logic_section="\n".join(logic_lines),
         conclusion_section=f"**综合结论**：{result['overall']}\n\n市场状态背景：{STATE_NAMES.get(result.get('market_state'), '未判定（运行 python run.py judge-state）')}",
         manual_check_section=manual_md,
+        multi_valuation_section=_render_multi_valuation(result.get("multi_valuation")),
+        risk_matrix_section=_render_risk_matrix(result.get("risk_matrix")),
+        self_check_section=_render_self_check(self_check),
     ))
 
     meta = {
@@ -262,6 +327,12 @@ def render_stock_report(snap: dict, result: dict) -> tuple[str, dict]:
         "overall": result["overall"],
         "timing_auto_score": t["auto_score_floor"],
         "assumption_count": len(result["assumptions"]),
+        "multi_valuation": {
+            "val_class": safe_get(result, "multi_valuation", "val_class"),
+            "combined": safe_get(result, "multi_valuation", "combined"),
+            "diverged": safe_get(result, "multi_valuation", "diverged"),
+        },
+        "self_check_warnings": len(self_check) if self_check is not None else None,
         "data_errors": list((snap.get("errors") or {}).keys()),
     }
     return filled, meta

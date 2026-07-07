@@ -3,7 +3,7 @@
   "code": "002594",
   "name": "比亚迪",
   "date": "20260707",
-  "generated_at": "2026-07-07T09:46:21.688124",
+  "generated_at": "2026-07-07T15:32:49.046830",
   "close": 87.54,
   "pe_ttm": 23.640291655414533,
   "pe_pct": 0.13690476190476192,
@@ -13,7 +13,21 @@
   "overall": "股息组合：排除（存在门槛FAIL项） ｜ 择时组合：不满足择时买入条件（存在FAIL项）",
   "timing_auto_score": 2,
   "assumption_count": 9,
+  "multi_valuation": {
+    "val_class": "G_growth",
+    "combined": null,
+    "diverged": true
+  },
+  "self_check_warnings": 0,
   "data_errors": [
     "peers"
+  ],
+  "formats": {
+    "md": "E:\\oneDrive\\investment-workbench\\investment-workbench\\output\\stock_reports\\个股_002594_比亚迪_20260707.md",
+    "html": "E:\\oneDrive\\investment-workbench\\investment-workbench\\output\\stock_reports\\个股_002594_比亚迪_20260707.html",
+    "pdf": "E:\\oneDrive\\investment-workbench\\investment-workbench\\output\\stock_reports\\个股_002594_比亚迪_20260707.pdf"
+  },
+  "format_notes": [
+    "PDF已生成（Edge无头打印，与HTML同引擎渲染）"
   ]
 }

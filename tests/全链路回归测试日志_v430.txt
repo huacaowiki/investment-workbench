@@ -1,0 +1,11 @@
+=== v4.3.0 全链路回归 2026-07-07 15:37 ===
+--- 单元测试 ---
+97 passed in 6.83s
+--- 月度迭代（历史兼容） ---
+✅ 月度迭代报告已生成：E:\oneDrive\investment-workbench\investment-workbench\output\iteration\月度体系迭代报告_2026-07.md
+--- 季度迭代 ---
+✅ 季度深度复盘报告已生成：E:\oneDrive\investment-workbench\investment-workbench\output\iteration\季度体系深度复盘报告_2026-Q3.md
+--- config校验 ---
+4/4 YAML valid (valuation v4.3.0)
+--- 示例产物 ---
+MD+HTML+PDF 六文件齐备

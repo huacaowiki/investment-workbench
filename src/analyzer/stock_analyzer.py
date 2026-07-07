@@ -100,8 +100,9 @@ def evaluate_veto(snap: dict, config: dict) -> list[dict]:
                              (f"命中：{[h['标题'] for h in fraud_hits[:3]]}" if fraud_hits
                               else "无造假类关键词命中→推定通过"), "§2.1裁决#7"))
         law_hits = scan.get("近1年诉讼类命中") or []
-        checks.append(_check("重大诉讼提示（命中不直接否决，报告P1预警）",
-                             PASS if not law_hits else PASS,
+        # 漏洞修复#4：诉讼命中按config auto_rule不直接否决（状态PASS），但必须贯通到
+        # 报告风险矩阵的公司风险区（此前预警信息止步于detail文本，与风险区脱节）
+        checks.append(_check("重大诉讼提示（命中不直接否决，报告P1预警）", PASS,
                              (f"⚠️近1年命中重大诉讼/仲裁公告：{[h['标题'] for h in law_hits[:3]]}（P1预警，影响需结合金额）"
                               if law_hits else "近1年无重大诉讼/仲裁公告"), "§2.1裁决#7"))
 
@@ -131,6 +132,37 @@ def effective_dividend_yield(snap: dict) -> tuple[float | None, str]:
     return dv, "最近年度分红记录（非TTM，口径标注）" if dv is not None else "缺失"
 
 
+# 分位判定的最小样本量（约1个交易年度）；低于此值分位无统计意义（新股/次新股场景）
+PERCENTILE_MIN_SAMPLES = 250
+
+
+def valuation_inputs(snap: dict) -> dict:
+    """
+    估值取值统一入口（漏洞修复#1/#2，2026-07-07审计）：
+    - 亏损股：PE≤0 时 PE 及其分位判定不适用（负PE曾被误判'PE≤30'满足——已修复）；
+    - 新股/次新股：分位序列样本<250 时分位判定降级为不可用并标注原因。
+    返回 {"pe","pe_pct","pb","pb_pct","pe_usable","pct_usable","window","note"}。
+    """
+    val = snap.get("valuation") or {}
+    pe, pb = val.get("PE_TTM"), val.get("PB")
+    pe_pct, pb_pct = val.get("PE历史分位"), val.get("PB历史分位")
+    samples = val.get("分位样本数")
+    notes = []
+    pe_usable = pe is not None and pe > 0
+    if pe is not None and pe <= 0:
+        notes.append(f"PE={pe}≤0（亏损/微利），PE类条款不适用，按不满足处理")
+    pct_usable = True
+    if samples is not None and samples < PERCENTILE_MIN_SAMPLES:
+        pct_usable = False
+        notes.append(f"分位样本仅{samples}个交易日（<{PERCENTILE_MIN_SAMPLES}），"
+                     "上市时间短，历史分位不具统计意义，分位类条款降级为数据不足")
+    if not pct_usable:
+        pe_pct, pb_pct = None, None
+    return {"pe": pe, "pb": pb, "pe_pct": pe_pct, "pb_pct": pb_pct,
+            "pe_usable": pe_usable, "pct_usable": pct_usable,
+            "window": val.get("分位窗口"), "note": "；".join(notes)}
+
+
 def _dividend_trend(snap: dict, years_required: int, non_decreasing: bool) -> tuple[str, str]:
     """分红趋势自动判定：近N年不间断（可选：且每股分红非递减）。"""
     dps = safe_get(snap, "dividends", "每股分红按年度") or {}
@@ -152,12 +184,15 @@ def evaluate_dividend_track(snap: dict, config: dict) -> dict:
     cn10y = snap.get("cn10y_yield")
     payout = snap.get("payout") or {}
 
+    # 漏洞修复#6：市值/成交额为0或负值属数据异常，按MISSING处理而非FAIL（0曾被判FAIL但detail显示"缺失"，状态与描述矛盾）
     mv = safe_get(snap, "basic", "总市值")
-    checks.append(_check("市值≥300亿", MISSING if mv is None else (PASS if mv >= 3e10 else FAIL),
-                         f"总市值 {mv/1e8:.0f}亿" if mv else "缺失", "§2.2通用"))
+    checks.append(_check("市值≥300亿",
+                         MISSING if (mv is None or mv <= 0) else (PASS if mv >= 3e10 else FAIL),
+                         f"总市值 {mv/1e8:.0f}亿" if (mv and mv > 0) else "缺失/异常", "§2.2通用"))
     t20 = safe_get(snap, "quote", "近20日日均成交额")
-    checks.append(_check("近20日日均成交额>1亿", MISSING if t20 is None else (PASS if t20 > 1e8 else FAIL),
-                         f"{t20/1e8:.2f}亿/日" if t20 else "缺失", "§2.2通用"))
+    checks.append(_check("近20日日均成交额>1亿",
+                         MISSING if (t20 is None or t20 <= 0) else (PASS if t20 > 1e8 else FAIL),
+                         f"{t20/1e8:.2f}亿/日" if (t20 and t20 > 0) else "缺失/异常", "§2.2通用"))
     dy_years = safe_get(snap, "dividends", "连续分红年数")
     checks.append(_check("连续分红≥5年", MISSING if dy_years is None else (PASS if dy_years >= 5 else FAIL),
                          f"连续分红 {dy_years} 年" if dy_years is not None else "缺失", "§2.2通用"))
@@ -199,6 +234,13 @@ def evaluate_dividend_track(snap: dict, config: dict) -> dict:
     cat_checks.append(_check(f"净利润近3年至少{need_pos}年为正",
                              MISSING if profit_pos_years is None else (PASS if profit_pos_years >= need_pos else FAIL),
                              f"近3年为正 {profit_pos_years} 年" if profit_pos_years is not None else "缺失", "§2.2分类"))
+    if cat == "C_stable":
+        # 漏洞修复#3（2026-07-07审计）：C类原文为"近3年均为正，且同比降幅<20%"，此前遗漏第二个子条件
+        np_yoy = fin.get("净利润最新同比")
+        cat_checks.append(_check("净利润同比降幅<20%",
+                                 MISSING if np_yoy is None else (PASS if np_yoy > -0.20 else FAIL),
+                                 f"最新净利同比 {fmt_pct(np_yoy)}" if np_yoy is not None else "增速数据缺失",
+                                 "§2.2分类·C类子条件"))
     trend_status, trend_detail = _dividend_trend(
         snap, years_required=5 if cat == "B_cyclical" else 3,
         non_decreasing=(cat == "C_stable"))
@@ -239,19 +281,20 @@ def evaluate_dividend_track(snap: dict, config: dict) -> dict:
 
 
 def evaluate_dividend_valuation(snap: dict, config: dict) -> dict:
-    """§2.2 估值买入标准：三选一。"""
-    pe = safe_get(snap, "valuation", "PE_TTM")
-    pb = safe_get(snap, "valuation", "PB")
-    pe_pct = safe_get(snap, "valuation", "PE历史分位")
-    pb_pct = safe_get(snap, "valuation", "PB历史分位")
-    window = safe_get(snap, "valuation", "分位窗口")
+    """§2.2 估值买入标准：三选一（亏损股/新股口径见 valuation_inputs）。"""
+    vi = valuation_inputs(snap)
+    pe, pb, pe_pct, pb_pct, window = vi["pe"], vi["pb"], vi["pe_pct"], vi["pb_pct"], vi["window"]
     ind_pe = safe_get(snap, "peers", "行业均值PE")
     dv, dv_note = effective_dividend_yield(snap)
     cn10y = snap.get("cn10y_yield")
+    edge = f"｜{vi['note']}" if vi["note"] else ""
 
     items = []
-    if pe is None or pe_pct is None:
-        items.append(_check("PE≤行业均值 且 历史30%分位以下", MISSING, "PE或分位缺失", "§2.2"))
+    if pe is not None and not vi["pe_usable"]:
+        items.append(_check("PE≤行业均值 且 历史30%分位以下", FAIL,
+                            f"PE {pe}≤0（亏损），PE条款不适用→按不满足处理{edge}", "§2.2·边界口径"))
+    elif pe is None or pe_pct is None:
+        items.append(_check("PE≤行业均值 且 历史30%分位以下", MISSING, f"PE或分位缺失{edge}", "§2.2"))
     elif ind_pe is None:
         items.append(_check("PE≤行业均值 且 历史30%分位以下", MISSING,
                             f"PE {pe}（分位 {fmt_pct(pe_pct)}，窗口{window}）；行业均值PE缺失，无法完整判定", "§2.2"))
@@ -260,7 +303,7 @@ def evaluate_dividend_valuation(snap: dict, config: dict) -> dict:
         items.append(_check("PE≤行业均值 且 历史30%分位以下", PASS if ok else FAIL,
                             f"PE {pe} vs 行业均值 {ind_pe:.1f}；分位 {fmt_pct(pe_pct)}（窗口{window}）", "§2.2"))
     if pb is None or pb_pct is None:
-        items.append(_check("PB≤2.5 且 历史30%分位以下", MISSING, "PB或分位缺失", "§2.2"))
+        items.append(_check("PB≤2.5 且 历史30%分位以下", MISSING, f"PB或分位缺失{edge}", "§2.2"))
     else:
         ok = (pb <= 2.5) and (pb_pct <= 0.30)
         items.append(_check("PB≤2.5 且 历史30%分位以下", PASS if ok else FAIL,
@@ -282,11 +325,13 @@ def evaluate_timing_track(snap: dict, config: dict, market_state: str | None) ->
     code = snap.get("code")
     pool = []
     mv = safe_get(snap, "basic", "总市值")
-    pool.append(_check("市值≥200亿", MISSING if mv is None else (PASS if mv >= 2e10 else FAIL),
-                       f"总市值 {mv/1e8:.0f}亿" if mv else "缺失", "§2.3"))
+    pool.append(_check("市值≥200亿",
+                       MISSING if (mv is None or mv <= 0) else (PASS if mv >= 2e10 else FAIL),
+                       f"总市值 {mv/1e8:.0f}亿" if (mv and mv > 0) else "缺失/异常", "§2.3"))
     t5 = safe_get(snap, "quote", "近5日日均成交额")
-    pool.append(_check("近5日日均成交额>1亿", MISSING if t5 is None else (PASS if t5 > 1e8 else FAIL),
-                       f"{t5/1e8:.2f}亿/日" if t5 else "缺失", "§2.3"))
+    pool.append(_check("近5日日均成交额>1亿",
+                       MISSING if (t5 is None or t5 <= 0) else (PASS if t5 > 1e8 else FAIL),
+                       f"{t5/1e8:.2f}亿/日" if (t5 and t5 > 0) else "缺失/异常", "§2.3"))
     fin = snap.get("financials") or {}
     roe = fin.get("ROE近3年均值_pct")
     pool.append(_check("ROE近3年均值≥8%", MISSING if roe is None else (PASS if roe >= 8 else FAIL),
@@ -307,25 +352,30 @@ def evaluate_timing_track(snap: dict, config: dict, market_state: str | None) ->
     gates = []
     gates.append(_check("标的在备选池内", PASS if wl else FAIL,
                         "watchlist.json 自动核对" + ("" if wl else "：未入池"), "§2.4裁决自动化"))
-    pe = safe_get(snap, "valuation", "PE_TTM")
-    pe_pct = safe_get(snap, "valuation", "PE历史分位")
-    pb = safe_get(snap, "valuation", "PB")
+    vi = valuation_inputs(snap)
+    pe, pe_pct, pb = vi["pe"], vi["pe_pct"], vi["pb"]
     dv, _dvn = effective_dividend_yield(snap)
     val_detail = []
-    if pe is not None and pe_pct is not None:
+    # 亏损股口径（漏洞修复#1）：PE≤0时条款①不适用，不得因"负数≤30"误判满足
+    if pe is not None and not vi["pe_usable"]:
+        val_detail.append(f"PE {pe}≤0（亏损）→ ①不适用")
+    elif pe is not None and pe_pct is not None:
         val_detail.append(f"PE {pe}/分位 {fmt_pct(pe_pct)} → {'满足' if (pe_pct <= 0.30 and pe <= 30) else '不满足'}①")
+    elif pe is not None and not vi["pct_usable"]:
+        val_detail.append("PE分位样本不足（新股口径）→ ①无法判定")
     if pb is not None:
         val_detail.append(f"PB {pb} → {'满足' if pb <= 2.5 else '不满足'}②")
     if dv is not None:
         val_detail.append(f"股息率 {fmt_pct(dv)} → {'满足' if dv >= 0.04 else '不满足'}③")
-    cond1 = (pe is not None and pe_pct is not None and pe_pct <= 0.30 and pe <= 30)
+    cond1 = (vi["pe_usable"] and pe_pct is not None and pe_pct <= 0.30 and pe <= 30)
     cond2 = (pb is not None and pb <= 2.5)
     cond3 = (dv is not None and dv >= 0.04)
     if pe is None and pb is None and dv is None:
         gates.append(_check("估值三选一(PE分位≤30%且PE≤30 / PB≤2.5 / 股息率≥4%)", MISSING, "估值数据缺失", "§2.4"))
     else:
         gates.append(_check("估值三选一(PE分位≤30%且PE≤30 / PB≤2.5 / 股息率≥4%)",
-                            PASS if (cond1 or cond2 or cond3) else FAIL, "；".join(val_detail), "§2.4"))
+                            PASS if (cond1 or cond2 or cond3) else FAIL,
+                            "；".join(val_detail) + (f"｜{vi['note']}" if vi["note"] else ""), "§2.4"))
     dd = safe_get(snap, "quote", "较1年内高点回撤")
     gates.append(_check("较1年内高点回撤≥25%", MISSING if dd is None else (PASS if dd >= 0.25 else FAIL),
                         fmt_pct(dd) if dd is not None else "缺失", "§2.4"))
@@ -384,23 +434,29 @@ def evaluate_timing_track(snap: dict, config: dict, market_state: str | None) ->
 
 
 def _forecast_cagr(snap: dict) -> float | None:
-    """机构预期CAGR：同花顺最远预测年EPS均值 vs 最近实际EPS（v4.2.0裁决口径）。"""
+    """
+    机构预期CAGR：同花顺最远预测年EPS均值 vs 最近实际EPS（v4.2.0裁决口径）。
+    漏洞修复#5（2026-07-07审计）：EPS与年度必须成对取值——此前分别过滤导致
+    最新年EPS缺失时基期年份与基期EPS错位，CAGR年数算错。
+    """
     fc = snap.get("institution_forecast") or {}
     rows = fc.get("预测EPS") or []
     fin = snap.get("financials") or {}
-    eps_list = [e for e in (fin.get("EPS各年") or []) if e]
-    years = fin.get("报告年度") or []
-    if not rows or not eps_list or not years:
+    pairs = [(str(y), to_float(e)) for y, e in
+             zip(fin.get("报告年度") or [], fin.get("EPS各年") or [])
+             if to_float(e) is not None and to_float(e) > 0 and str(y).isdigit()]
+    if not rows or not pairs:
         return None
-    base_eps = eps_list[-1]
-    base_year = int(years[-1])
-    valid = [(int(r["年度"]), r["均值"]) for r in rows
-             if r.get("均值") and str(r.get("年度", "")).isdigit()]
-    if not valid or base_eps <= 0:
+    base_year_s, base_eps = pairs[-1]   # 成对取最近一个"EPS有效"的年度
+    base_year = int(base_year_s)
+    valid = [(int(r["年度"]), to_float(r["均值"])) for r in rows
+             if to_float(r.get("均值")) and str(r.get("年度", "")).isdigit()]
+    valid = [(y, e) for y, e in valid if e and e > 0]
+    if not valid:
         return None
     far_year, far_eps = max(valid)
     n = far_year - base_year
-    if n <= 0 or far_eps <= 0:
+    if n <= 0:
         return None
     return (far_eps / base_eps) ** (1 / n) - 1
 
@@ -409,9 +465,9 @@ def _forecast_cagr(snap: dict) -> float | None:
 # 估值分级与风控参数
 # -----------------------------------------------------------------------------
 def price_zone(snap: dict, dividend_val: dict, config: dict) -> dict:
-    """价格区间分级（valuation_model.yaml price_zone_definition）。"""
-    pe_pct = safe_get(snap, "valuation", "PE历史分位")
-    pb_pct = safe_get(snap, "valuation", "PB历史分位")
+    """价格区间分级（valuation_model.yaml price_zone_definition）。分位口径同 valuation_inputs。"""
+    vi = valuation_inputs(snap)
+    pe_pct, pb_pct = vi["pe_pct"], vi["pb_pct"]
     dv, _ = effective_dividend_yield(snap)
     cn10y = snap.get("cn10y_yield")
     yield_trigger = (dv is not None and cn10y is not None and dv < cn10y)
@@ -436,7 +492,9 @@ def risk_params(snap: dict, config: dict, circle: str | None) -> dict:
     caps = safe_get(config, "risk_control", "position_caps") or {}
     div_cap = safe_get(caps, "dividend", "single_stock") or 0.15
     tim_cap = safe_get(caps, "timing", "single_stock") or 0.25
-    modifier = caps.get("satellite_circle_modifier") or 0.5
+    modifier = caps.get("satellite_circle_modifier")
+    if modifier is None:   # 显式判None：config配0.5是合法值，"or"写法会把0误吞
+        modifier = 0.5
     circle_note = {"core": "核心能力圈：单票可至组合上限",
                    "satellite": f"卫星能力圈：仓位减半（×{modifier}）",
                    "excluded": "能力圈外：禁止建仓（红线）",
@@ -465,6 +523,68 @@ def risk_params(snap: dict, config: dict, circle: str | None) -> dict:
 
 
 # -----------------------------------------------------------------------------
+# 四类风险矩阵（漏洞修复#7，2026-07-07审计：风险完备性维度）
+# 宏观/行业/公司/估值四类全覆盖；全部由数据与规则驱动，无主观行情判断
+# -----------------------------------------------------------------------------
+def build_risk_matrix(snap: dict, cls: dict, market_state: str | None,
+                      zone: dict, config: dict) -> dict:
+    """输出 {"宏观": [...], "行业": [...], "公司": [...], "估值": [...]}，每条含级别与依据。"""
+    fin = snap.get("financials") or {}
+    scan = snap.get("announcement_scan") or {}
+    vi = valuation_inputs(snap)
+    risks: dict = {"宏观": [], "行业": [], "公司": [], "估值": []}
+
+    # 宏观
+    if market_state == "C_overvalued":
+        risks["宏观"].append({"级别": "P1", "内容": "市场处于C区·高估：择时只卖不买；股息暂停买入并逐票执行估值卖出检查（§1.4/裁决#10）"})
+    elif market_state == "B_high":
+        risks["宏观"].append({"级别": "P2", "内容": "市场处于B偏高：股息组合暂停买入、择时不开新仓（§1.4仓位映射）"})
+    elif market_state is None:
+        risks["宏观"].append({"级别": "P2", "内容": "市场状态未判定，仓位映射与'非C区'门槛无法核对——运行 judge-state 补数"})
+
+    # 行业
+    if cls.get("circle") == "excluded":
+        risks["行业"].append({"级别": "P0", "内容": "行业自动归类属能力圈外——§2.1红线禁止建仓"})
+    elif cls.get("circle") is None:
+        risks["行业"].append({"级别": "P3", "内容": "能力圈未映射，仓位按卫星减半保守口径执行（自动口径）"})
+    if cls.get("category") == "A_financial":
+        risks["行业"].append({"级别": "P2", "内容": "金融类标的：不良率/拨备覆盖/资本充足率三项无公开可编程数据源未核（裁决口径），关注监管披露"})
+    if safe_get(snap, "peers", "行业均值PE") is None:
+        risks["行业"].append({"级别": "P3", "内容": "行业均值PE数据缺失，'PE≤行业均值'条款无法完整判定"})
+
+    # 公司
+    law_hits = scan.get("近1年诉讼类命中") or []
+    if law_hits:
+        risks["公司"].append({"级别": "P1", "内容": f"近1年命中重大诉讼/仲裁公告 {len(law_hits)} 条：{[h['标题'][:25] for h in law_hits[:2]]}——影响需结合涉案金额人工评估"})
+    pledge = snap.get("pledge_ratio")
+    if pledge is not None and 0.25 <= pledge < 0.30:
+        risks["公司"].append({"级别": "P2", "内容": f"大股东质押率 {fmt_pct(pledge)} 接近30%红线"})
+    np_yoy = fin.get("净利润最新同比")
+    if np_yoy is not None and np_yoy < -0.20:
+        risks["公司"].append({"级别": "P2", "内容": f"最新净利润同比 {fmt_pct(np_yoy)}，降幅超20%（C类分红股该项直接不达标）"})
+    if scan:
+        risks["公司"].append({"级别": "P3", "内容": f"审计/监管/造假三项为公告标题扫描推定口径（覆盖自{scan.get('覆盖起点')}，{scan.get('扫描公告数')}条），关键决策前建议复核年报审计报告原文"})
+    else:
+        risks["公司"].append({"级别": "P2", "内容": "公告合规扫描数据缺失，审计/监管/诉讼风险未核"})
+
+    # 估值
+    if zone.get("zone", "").startswith("减持区"):
+        risks["估值"].append({"级别": "P1", "内容": f"已触发估值卖出条件：{zone['zone']}"})
+    if safe_get(zone, "volume_stall", "signal"):
+        risks["估值"].append({"级别": "P1", "内容": "放量滞涨卖出信号触发（裁决#12量化口径）——按§3.2止盈第三档提示"})
+    if vi["note"]:
+        risks["估值"].append({"级别": "P2", "内容": f"估值口径限制：{vi['note']}"})
+    window = vi.get("window") or ""
+    if "百度" in window or "约" in window:
+        risks["估值"].append({"级别": "P3", "内容": f"分位窗口为降级口径（{window}），非标准近10年，分位结论参考性打折"})
+
+    for cat in risks:
+        if not risks[cat]:
+            risks[cat].append({"级别": "P3", "内容": "无规则相关风险触发"})
+    return risks
+
+
+# -----------------------------------------------------------------------------
 # 统一入口
 # -----------------------------------------------------------------------------
 def analyze_stock(snap: dict, config: dict | None = None,
@@ -489,9 +609,17 @@ def analyze_stock(snap: dict, config: dict | None = None,
         overall = "排除：行业自动归类属能力圈外（§2.1禁止建仓）"
     else:
         overall = f"股息组合：{dividend['verdict']} ｜ 择时组合：{timing['verdict']}"
-    return {"code": snap.get("code"), "name": safe_get(snap, "basic", "名称"),
-            "classify": cls, "veto": veto, "dividend": dividend, "timing": timing,
-            "zone": zone, "risk": risk, "overall": overall,
-            "assumptions": assumptions,
-            "market_state": market_state,
-            "errors": snap.get("errors") or {}}
+    result = {"code": snap.get("code"), "name": safe_get(snap, "basic", "名称"),
+              "classify": cls, "veto": veto, "dividend": dividend, "timing": timing,
+              "zone": zone, "risk": risk, "overall": overall,
+              "assumptions": assumptions,
+              "risk_matrix": build_risk_matrix(snap, cls, market_state, zone, config),
+              "market_state": market_state,
+              "errors": snap.get("errors") or {}}
+    # 多锚估值（v4.3.0任务二）：并行多方法估值，失败不影响主判定链路
+    try:
+        from src.analyzer.multi_valuation import multi_anchor_valuation
+        result["multi_valuation"] = multi_anchor_valuation(snap, config, cls["category"])
+    except Exception as exc:  # noqa: BLE001
+        result["multi_valuation"] = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+    return result

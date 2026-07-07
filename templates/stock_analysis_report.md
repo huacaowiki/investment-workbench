@@ -21,9 +21,11 @@
 
 {timing_track_section}
 
-## 五、估值分析（valuation_model.yaml）
+## 五、估值分析（valuation_model.yaml v4.3.0 多锚点体系）
 
 {valuation_section}
+
+{multi_valuation_section}
 
 ## 六、风控参数测算（risk_control.yaml，仅当具备入选资格时适用）
 
@@ -33,6 +35,10 @@
 
 {logic_section}
 
+### 四类风险矩阵（宏观 / 行业 / 公司 / 估值）
+
+{risk_matrix_section}
+
 ## 八、结论
 
 {conclusion_section}
@@ -40,6 +46,10 @@
 ### 推定判定与数据口径说明（v4.2.0全自动化）
 
 {manual_check_section}
+
+### 逻辑自检结果
+
+{self_check_section}
 
 ---
 

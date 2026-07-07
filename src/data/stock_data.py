@@ -117,6 +117,9 @@ def _valuation(code: str) -> dict:
             "PE历史分位": percentile_rank(pe_series, pe),
             "PB历史分位": percentile_rank(pb_series, pb),
             "分位窗口": f"近{PERCENTILE_YEARS}年（乐咕）",
+            "分位样本数": len([x for x in pe_series if x is not None]),
+            "PE分位值": _series_quantiles(pe_series),   # 多锚估值用：30/50/70分位对应的PE水平
+            "PB分位值": _series_quantiles(pb_series),
         }
     except Exception:
         pass
@@ -140,7 +143,23 @@ def _valuation(code: str) -> dict:
         "PE历史分位": percentile_rank(pe_series, pe),
         "PB历史分位": percentile_rank(pb_series, pb),
         "分位窗口": f"约{years}年（百度末级兜底，非近10年口径，报告须标注）",
+        "分位样本数": len([x for x in pe_series if x is not None]),
+        "PE分位值": _series_quantiles(pe_series),
+        "PB分位值": _series_quantiles(pb_series),
     }
+
+
+def _series_quantiles(series: list) -> dict | None:
+    """序列的30/50/70分位水平值（多锚估值的历史分位法参数）。剔除非正值。"""
+    clean = sorted(x for x in (to_float(v) for v in series) if x is not None and x > 0)
+    if len(clean) < 30:
+        return None
+
+    def q(p: float) -> float:
+        idx = min(len(clean) - 1, max(0, int(round(p * (len(clean) - 1)))))
+        return round(clean[idx], 2)
+
+    return {"p30": q(0.30), "p50": q(0.50), "p70": q(0.70)}
 
 
 def _valuation_selfcalc(code: str) -> dict:
@@ -184,6 +203,9 @@ def _valuation_selfcalc(code: str) -> dict:
         "PE历史分位": percentile_rank(pe_series, pe),
         "PB历史分位": percentile_rank(pb_series, pb),
         "分位窗口": f"近{PERCENTILE_YEARS}年（二级源自算：新浪价格×年报EPS/BPS阶梯，静态近似口径）",
+        "分位样本数": len([x for x in pe_series if x is not None]),
+        "PE分位值": _series_quantiles(pe_series),
+        "PB分位值": _series_quantiles(pb_series),
     }
 
 
@@ -211,12 +233,15 @@ def _financials(code: str) -> dict:
     debt_ratio = col("资产负债率(%)")
     main_income = col("主营业务收入(元)")
     eps = col("摊薄每股收益(元)", "加权每股收益(元)", "每股收益_调整后(元)")
+    bps = col("每股净资产_调整后(元)", "每股净资产(元)")
     years = annual["日期"].str[:4].tolist()
 
     return {
         "报告年度": years,
         "ROE各年_pct": roe,                       # 百分数口径
         "ROE近3年均值_pct": avg(roe[-3:]),
+        "BPS最新": next((x for x in reversed(bps) if x), None),   # v4.3.0：PB法估值基数
+        "营收各年": main_income,                                    # v4.3.0：PS法估值输入
         "净利润各年": net_profit,
         "净利润近3年为正年数": sum(1 for x in net_profit[-3:] if x is not None and x > 0),
         "净利润近3年全为负": (len(net_profit[-3:]) == 3 and

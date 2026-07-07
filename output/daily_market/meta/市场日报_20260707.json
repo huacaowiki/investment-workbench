@@ -1,0 +1,71 @@
+{
+  "type": "daily_market",
+  "date": "20260707",
+  "generated_at": "2026-07-07T15:32:58.585219",
+  "index": {
+    "上证指数": {
+      "close": 3990.2353,
+      "pct": -1.262
+    },
+    "沪深300": {
+      "close": 4792.2624,
+      "pct": -1.027
+    },
+    "科创50": {
+      "close": 2001.5859,
+      "pct": 0.275
+    },
+    "中证500": {
+      "close": 8508.7885,
+      "pct": -1.645
+    },
+    "深证成指": {
+      "close": 15225.113,
+      "pct": -1.243
+    },
+    "创业板指": {
+      "close": 3911.907,
+      "pct": -0.936
+    }
+  },
+  "total_turnover": 2581148551908.0,
+  "sentiment_score": 4.3,
+  "top_sectors": [
+    "供水供气",
+    "次新股",
+    "公路桥梁",
+    "电子信息",
+    "机械行业"
+  ],
+  "bottom_sectors": [
+    "纺织机械",
+    "摩托车",
+    "发电设备",
+    "综合行业",
+    "医疗器械"
+  ],
+  "effective_state": "B_high",
+  "auto_state": "B_high",
+  "equity_bond_spread": 0.034167391752577325,
+  "volatility": {
+    "指标": "QVIX(300ETF期权隐含波动率)",
+    "数值": 0.2029
+  },
+  "alerts": [
+    {
+      "级别": "P3",
+      "内容": "数据缺失项：lhb（分析已按缺失处理）"
+    }
+  ],
+  "data_errors": [
+    "lhb"
+  ],
+  "formats": {
+    "md": "E:\\oneDrive\\investment-workbench\\investment-workbench\\output\\daily_market\\市场日报_20260707.md",
+    "html": "E:\\oneDrive\\investment-workbench\\investment-workbench\\output\\daily_market\\市场日报_20260707.html",
+    "pdf": "E:\\oneDrive\\investment-workbench\\investment-workbench\\output\\daily_market\\市场日报_20260707.pdf"
+  },
+  "format_notes": [
+    "PDF已生成（Edge无头打印，与HTML同引擎渲染）"
+  ]
+}

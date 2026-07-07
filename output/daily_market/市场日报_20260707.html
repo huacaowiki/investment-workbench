@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A股市场日报 20260707</title>
+<style>
+:root {
+  --bg: #F7F7F8; --card: #FFFFFF; --primary: #4F46E5;
+  --text: #1F2937; --muted: #6B7280; --up: #059669; --down: #DC2626;
+  --warn-bg: #FFF7ED; --warn-fg: #C2410C; --border: #E5E7EB;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 32px 16px; background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei",
+               "PingFang SC", "Noto Sans SC", sans-serif;
+  font-size: 15px; line-height: 1.6;
+}
+.report {
+  max-width: 860px; margin: 0 auto; background: var(--card);
+  border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.03);
+  padding: 40px 48px;
+}
+h1 { font-size: 26px; line-height: 1.35; margin: 0 0 12px; letter-spacing: -0.01em; }
+h2 {
+  font-size: 19px; margin: 36px 0 14px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border); letter-spacing: -0.01em;
+}
+h3 { font-size: 16px; margin: 24px 0 10px; color: var(--text); }
+p { margin: 10px 0; }
+strong { font-weight: 600; }
+a { color: var(--primary); text-decoration: none; }
+hr { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; background: var(--warn-bg);
+  border-left: 3px solid var(--warn-fg); border-radius: 0 12px 12px 0;
+  color: var(--warn-fg); font-size: 13.5px;
+}
+blockquote p { margin: 4px 0; }
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px;
+  border: none; page-break-inside: avoid;
+}
+th {
+  text-align: left; font-weight: 600; color: var(--muted); font-size: 12.5px;
+  padding: 8px 10px; border-bottom: 1px solid var(--border); background: transparent;
+}
+td { padding: 8px 10px; border-bottom: 1px solid #F0F0F2; vertical-align: top; }
+tr:hover td { background: #FAFAFB; }
+tr:last-child td { border-bottom: none; }
+ul, ol { margin: 10px 0; padding-left: 22px; }
+li { margin: 4px 0; }
+code {
+  background: #F3F4F6; border-radius: 6px; padding: 1px 6px;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 13px;
+}
+.up { color: var(--up); } .down { color: var(--down); }
+.meta-note { color: var(--muted); font-size: 12.5px; }
+.footer {
+  max-width: 860px; margin: 20px auto 0; text-align: center;
+  color: var(--muted); font-size: 12px;
+}
+/* 打印/PDF：卡片表格不跨页断裂，每页重复页脚 */
+@media print {
+  body { background: #FFFFFF; padding: 0 0 40px 0; }
+  .report { border: none; box-shadow: none; padding: 8px 6px; max-width: 100%; }
+  h2 { page-break-after: avoid; }
+  table, blockquote { page-break-inside: avoid; }
+  tr:hover td { background: transparent; }
+  .footer { display: none; }
+  .pdf-footer {
+    display: block; position: fixed; bottom: 0; left: 0; right: 0;
+    text-align: center; font-size: 10.5px; color: #6B7280;
+    border-top: 1px solid #E5E7EB; padding: 6px 0 2px; background: #FFFFFF;
+  }
+}
+.pdf-footer { display: none; }
+@page { margin: 16mm 12mm 20mm 12mm; }
+</style>
+</head>
+<body>
+<div class="report">
+<h1>A股市场日报 · 20260707</h1>
+<blockquote>
+<p>生成时间：2026-07-07 15:32 ｜ 数据源：akshare（东财/新浪/巨潮公开接口）
+执行标准：config/ 铁则层 v4.2.0 ｜ 本报告仅为研究分析，不构成投资建议</p>
+</blockquote>
+<hr />
+<h2>一、大盘指数总览</h2>
+<table>
+<thead>
+<tr>
+<th>指数</th>
+<th>收盘</th>
+<th>涨跌幅</th>
+<th>成交额</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>上证指数</td>
+<td>3990.2353</td>
+<td><span class="down">-1.26%</span></td>
+<td>11963.71亿</td>
+</tr>
+<tr>
+<td>沪深300</td>
+<td>4792.2624</td>
+<td><span class="down">-1.03%</span></td>
+<td>7626.18亿</td>
+</tr>
+<tr>
+<td>科创50</td>
+<td>2001.5859</td>
+<td><span class="up">+0.28%</span></td>
+<td>1595.60亿</td>
+</tr>
+<tr>
+<td>中证500</td>
+<td>8508.7885</td>
+<td><span class="down">-1.65%</span></td>
+<td>5309.38亿</td>
+</tr>
+<tr>
+<td>深证成指</td>
+<td>15225.113</td>
+<td><span class="down">-1.24%</span></td>
+<td>13847.77亿</td>
+</tr>
+<tr>
+<td>创业板指</td>
+<td>3911.907</td>
+<td><span class="down">-0.94%</span></td>
+<td>6220.30亿</td>
+</tr>
+</tbody>
+</table>
+<p>两市成交额合计约 <strong>25811.49亿</strong>（上证+深成口径）</p>
+<h2>二、市场情绪与涨跌结构</h2>
+<ul>
+<li>上涨 639.0 家 / 下跌 4535.0 家（上涨占比 12.35%）</li>
+<li>涨停 25 家 / 跌停 3 家</li>
+<li>情绪观察分：<strong>4.3 / 10</strong><blockquote>
+<p>情绪观察分为报告展示用工程化指标（上涨占比60%+涨跌停结构40%），非config铁则，不参与规则判定</p>
+</blockquote>
+</li>
+</ul>
+<h2>三、板块强弱排序</h2>
+<p><strong>领涨板块（前5）</strong></p>
+<table>
+<thead>
+<tr>
+<th>板块</th>
+<th>涨跌幅</th>
+<th>领涨股/家数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>供水供气</td>
+<td><span class="down">-0.06%</span></td>
+<td>25</td>
+</tr>
+<tr>
+<td>次新股</td>
+<td><span class="down">-0.63%</span></td>
+<td>137</td>
+</tr>
+<tr>
+<td>公路桥梁</td>
+<td><span class="down">-0.93%</span></td>
+<td>20</td>
+</tr>
+<tr>
+<td>电子信息</td>
+<td><span class="down">-1.06%</span></td>
+<td>247</td>
+</tr>
+<tr>
+<td>机械行业</td>
+<td><span class="down">-1.09%</span></td>
+<td>211</td>
+</tr>
+</tbody>
+</table>
+<p><strong>领跌板块（后5）</strong></p>
+<table>
+<thead>
+<tr>
+<th>板块</th>
+<th>涨跌幅</th>
+<th>领涨股/家数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>纺织机械</td>
+<td><span class="down">-4.97%</span></td>
+<td>8</td>
+</tr>
+<tr>
+<td>摩托车</td>
+<td><span class="down">-4.51%</span></td>
+<td>6</td>
+</tr>
+<tr>
+<td>发电设备</td>
+<td><span class="down">-4.27%</span></td>
+<td>65</td>
+</tr>
+<tr>
+<td>综合行业</td>
+<td><span class="down">-3.95%</span></td>
+<td>33</td>
+</tr>
+<tr>
+<td>医疗器械</td>
+<td><span class="down">-3.84%</span></td>
+<td>31</td>
+</tr>
+</tbody>
+</table>
+<h2>四、资金动向</h2>
+<p><strong>两融资金（融资余额）</strong></p>
+<ul>
+<li>沪市融资余额（最新）：14941.17亿，较10个交易日前 <span class="down">-0.76%</span></li>
+<li>深市融资余额（最新）：14568.13亿</li>
+<li>两市融资余额合计：29509.30亿<blockquote>
+<p>交易所官方两融数据（沪市聚合序列+深市明细汇总）；北向数据已停发按裁决删除</p>
+</blockquote>
+</li>
+</ul>
+<p><strong>龙虎榜净买入前列</strong></p>
+<p><em>（无数据）</em></p>
+<blockquote>
+<p>口径说明：北向资金数据已停发（v4.2.0裁决删除），资金动向采用交易所官方两融数据；龙虎榜为当日营业部/机构席位净买入前列。</p>
+</blockquote>
+<h2>五、市场状态判定（§1.3 A/B/C区框架）</h2>
+<table>
+<thead>
+<tr>
+<th>区</th>
+<th>条件</th>
+<th>程序判定</th>
+<th>当前值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A区</td>
+<td>上证跌破3000点（或PB历史5%分位以下）</td>
+<td>❌ 否</td>
+<td>上证收盘 3990.2353｜PB分位半边无公开数据源，按点位半边判定</td>
+</tr>
+<tr>
+<td>A区</td>
+<td>全A PE&lt;22倍</td>
+<td>✅ 是</td>
+<td>中证全指PE1 = 19.4｜替代口径：中证全指（含金融石化，偏保守）</td>
+</tr>
+<tr>
+<td>A区</td>
+<td>股债利差&gt;5%</td>
+<td>❌ 否</td>
+<td>利差 3.42%（1/PE 5.15% − 国债 1.74%）</td>
+</tr>
+<tr>
+<td>A区</td>
+<td>日成交额连续10日&lt;7000亿</td>
+<td>📝 待人工</td>
+<td>近2日成交额 ['30911亿', '25811亿']…｜自建序列仅2日样本（&lt;10日），连续性条件不参与计分，当前样本趋势：存在≥7000亿；换手率半边无公开序列，按成交额半边判定</td>
+</tr>
+<tr>
+<td>A区</td>
+<td>全市场破净率&gt;10%</td>
+<td>📝 待人工</td>
+<td>不参与自动判定｜无可编程公开数据源（v4.2.0核实）</td>
+</tr>
+<tr>
+<td>A区</td>
+<td>官方'提振资本市场'表述</td>
+<td>📝 待人工</td>
+<td>不参与自动判定｜定性条件（裁决#3）</td>
+</tr>
+<tr>
+<td>C区</td>
+<td>上证逼近/突破历史高点（≥历史最高×95%）</td>
+<td>❌ 否</td>
+<td>收盘 3990.2353 vs 历史最高 6092.057</td>
+</tr>
+<tr>
+<td>C区</td>
+<td>日成交额连续5日&gt;1.5万亿</td>
+<td>📝 待人工</td>
+<td>近2日样本｜样本仅2日（&lt;5日），连续性条件不参与计分，当前样本趋势：全部&gt;1.5万亿；恐惧贪婪指数无可编程源，取原文并列可测部分（裁决#2）</td>
+</tr>
+<tr>
+<td>C区</td>
+<td>股债利差&lt;2%</td>
+<td>❌ 否</td>
+<td>利差 3.42%</td>
+</tr>
+<tr>
+<td>C区</td>
+<td>新股民开户数同比历史高位</td>
+<td>📝 待人工</td>
+<td>不参与自动判定｜无可编程公开数据源</td>
+</tr>
+<tr>
+<td>C区</td>
+<td>偏股基金日光基</td>
+<td>📝 待人工</td>
+<td>不参与自动判定｜定性条件</td>
+</tr>
+<tr>
+<td>C区</td>
+<td>官方提示金融市场风险</td>
+<td>📝 待人工</td>
+<td>不参与自动判定｜定性条件（裁决#3）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>程序初判</strong>：B偏高（A区命中 1 条 / C区命中 0 条 / 股债利差 3.42%）</p>
+<p><strong>当前生效状态</strong>：B偏高</p>
+<blockquote>
+<p>生效状态来源：程序初判（A区命中1条/C区命中0条（均&lt;3），按股债利差 3.42% 落入B区细分带）；人工 set-state 可覆盖</p>
+</blockquote>
+<h2>六、仓位约束提示（§1.4 映射，铁则）</h2>
+<table>
+<thead>
+<tr>
+<th>市场状态</th>
+<th>股息组合仓位上限</th>
+<th>择时组合仓位上限</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A区·低估</td>
+<td>100.00%</td>
+<td>100.00%</td>
+</tr>
+<tr>
+<td>B偏低</td>
+<td>80.00%</td>
+<td>70.00%</td>
+</tr>
+<tr>
+<td>B中性</td>
+<td>70.00%</td>
+<td>50.00%</td>
+</tr>
+<tr>
+<td>B偏高 ◀ 当前</td>
+<td>60.00%</td>
+<td>40.00%（不开新仓）</td>
+</tr>
+<tr>
+<td>C区·高估</td>
+<td>暂停买入 + 逐票执行估值卖出触发检查（valuation_model.yaml sell_triggers），原文'考虑减持高估标的'的确认口径</td>
+<td>20.00%（只卖不买，降至20%以下）</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>严格风控模式（§1.5）触发条件：年度盈利&gt;15% / 进入C区 / 沪深300波动率&gt;35% → 择时仓位上限30%、单票15%、不开新仓</p>
+</blockquote>
+<h2>七、核心风险提示</h2>
+<ul>
+<li><strong>[P3]</strong> 数据缺失项：lhb（分析已按缺失处理）</li>
+</ul>
+<h2>八、数据缺失与口径说明</h2>
+<ul>
+<li>10年期国债收益率：1.74%（股息率门槛锚定值）</li>
+<li>波动率：QVIX(300ETF期权隐含波动率) = 20.29%（主口径（v4.2.0裁决#11）；严格风控触发线35%）</li>
+<li>中证全指PE1：19.4（'全A PE&lt;22'与股债利差的替代口径，2026-06-09）</li>
+<li>板块数据源：新浪行业(备源)</li>
+<li>⚠️ <code>lhb</code> 拉取失败：TypeError: 'NoneType' object is not subscriptable（该项分析按缺失处理）</li>
+</ul>
+<h2>九、逻辑自检结果</h2>
+<p>✅ 自检通过：分析结论与 config 铁则一致性校验、结论自洽性校验、数值合法性校验、边界口径落实校验全部通过。</p>
+<hr />
+<p><strong>免责声明</strong>：本报告由个人投资研究工作台自动生成，全部内容仅为个人研究记录与策略框架支撑，
+不构成任何证券买卖建议或投资咨询意见。市场有风险，决策需独立判断并自担后果。</p>
+</div>
+<div class="footer">投资研究工作台 · A股市场日报 20260707 · 生成于 2026-07-07 15:32 · 仅研究分析，不构成投资建议</div>
+<div class="pdf-footer">A股市场日报 20260707 ｜ 生成日期 2026-07-07 15:32 ｜ 投资研究工作台 · 仅研究分析不构成投资建议</div>
+</body>
+</html>

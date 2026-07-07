@@ -32,6 +32,17 @@
         "valuation_model.yaml",
         "risk_control.yaml"
       ]
+    },
+    {
+      "version_id": "v004_20260707_145033",
+      "date": "2026-07-07 14:50:33",
+      "note": "任务二多锚估值体系升级前备份",
+      "files": [
+        "investment_system.yaml",
+        "stock_selection.yaml",
+        "valuation_model.yaml",
+        "risk_control.yaml"
+      ]
     }
   ]
 }

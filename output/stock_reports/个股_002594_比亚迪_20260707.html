@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>个股分析报告 比亚迪（002594）20260707</title>
+<style>
+:root {
+  --bg: #F7F7F8; --card: #FFFFFF; --primary: #4F46E5;
+  --text: #1F2937; --muted: #6B7280; --up: #059669; --down: #DC2626;
+  --warn-bg: #FFF7ED; --warn-fg: #C2410C; --border: #E5E7EB;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 32px 16px; background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei",
+               "PingFang SC", "Noto Sans SC", sans-serif;
+  font-size: 15px; line-height: 1.6;
+}
+.report {
+  max-width: 860px; margin: 0 auto; background: var(--card);
+  border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.03);
+  padding: 40px 48px;
+}
+h1 { font-size: 26px; line-height: 1.35; margin: 0 0 12px; letter-spacing: -0.01em; }
+h2 {
+  font-size: 19px; margin: 36px 0 14px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border); letter-spacing: -0.01em;
+}
+h3 { font-size: 16px; margin: 24px 0 10px; color: var(--text); }
+p { margin: 10px 0; }
+strong { font-weight: 600; }
+a { color: var(--primary); text-decoration: none; }
+hr { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; background: var(--warn-bg);
+  border-left: 3px solid var(--warn-fg); border-radius: 0 12px 12px 0;
+  color: var(--warn-fg); font-size: 13.5px;
+}
+blockquote p { margin: 4px 0; }
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px;
+  border: none; page-break-inside: avoid;
+}
+th {
+  text-align: left; font-weight: 600; color: var(--muted); font-size: 12.5px;
+  padding: 8px 10px; border-bottom: 1px solid var(--border); background: transparent;
+}
+td { padding: 8px 10px; border-bottom: 1px solid #F0F0F2; vertical-align: top; }
+tr:hover td { background: #FAFAFB; }
+tr:last-child td { border-bottom: none; }
+ul, ol { margin: 10px 0; padding-left: 22px; }
+li { margin: 4px 0; }
+code {
+  background: #F3F4F6; border-radius: 6px; padding: 1px 6px;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 13px;
+}
+.up { color: var(--up); } .down { color: var(--down); }
+.meta-note { color: var(--muted); font-size: 12.5px; }
+.footer {
+  max-width: 860px; margin: 20px auto 0; text-align: center;
+  color: var(--muted); font-size: 12px;
+}
+/* 打印/PDF：卡片表格不跨页断裂，每页重复页脚 */
+@media print {
+  body { background: #FFFFFF; padding: 0 0 40px 0; }
+  .report { border: none; box-shadow: none; padding: 8px 6px; max-width: 100%; }
+  h2 { page-break-after: avoid; }
+  table, blockquote { page-break-inside: avoid; }
+  tr:hover td { background: transparent; }
+  .footer { display: none; }
+  .pdf-footer {
+    display: block; position: fixed; bottom: 0; left: 0; right: 0;
+    text-align: center; font-size: 10.5px; color: #6B7280;
+    border-top: 1px solid #E5E7EB; padding: 6px 0 2px; background: #FFFFFF;
+  }
+}
+.pdf-footer { display: none; }
+@page { margin: 16mm 12mm 20mm 12mm; }
+</style>
+</head>
+<body>
+<div class="report">
+<h1>个股分析报告 · 比亚迪（002594）</h1>
+<blockquote>
+<p>报告日期：2026-07-07 ｜ 生成时间：2026-07-07 15:32
+执行标准：config/ 铁则层 v4.2.0 ｜ 仅研究分析，不构成投资建议</p>
+</blockquote>
+<hr />
+<h2>一、公司概况与数据快照</h2>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>数值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>名称/代码</td>
+<td>比亚迪（002594）</td>
+</tr>
+<tr>
+<td>行业</td>
+<td>汽车制造业（证监会行业分类（巨潮备源））</td>
+</tr>
+<tr>
+<td>总市值</td>
+<td>7981.19亿</td>
+</tr>
+<tr>
+<td>最新收盘价</td>
+<td>87.54</td>
+</tr>
+<tr>
+<td>较1年内高点回撤</td>
+<td>23.91%</td>
+</tr>
+<tr>
+<td>PE(TTM) / 历史分位</td>
+<td>23.64 / 13.69%（近10年（二级源自算：新浪价格×年报EPS/BPS阶梯，静态近似口径））</td>
+</tr>
+<tr>
+<td>PB / 历史分位</td>
+<td>3.24 / 34.76%</td>
+</tr>
+<tr>
+<td>股息率TTM</td>
+<td>—</td>
+</tr>
+<tr>
+<td>ROE近3年均值</td>
+<td>18.87%</td>
+</tr>
+<tr>
+<td>连续分红年数</td>
+<td>10</td>
+</tr>
+<tr>
+<td>派现比例近3年均值</td>
+<td>22.08%</td>
+</tr>
+<tr>
+<td>收现比 / 净现比（最新年度）</td>
+<td>102.15% / 175.16%</td>
+</tr>
+<tr>
+<td>大股东质押率</td>
+<td>4.55%</td>
+</tr>
+<tr>
+<td>10年国债收益率</td>
+<td>1.74%</td>
+</tr>
+</tbody>
+</table>
+<h2>二、一票否决项检查（§2.1 红线 + 合规门槛）</h2>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>判定</th>
+<th>详情</th>
+<th>规则来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ST/退市风险股</td>
+<td>✅通过</td>
+<td>证券简称：比亚迪</td>
+<td>§2.1</td>
+</tr>
+<tr>
+<td>大股东质押率&lt;30%</td>
+<td>✅通过</td>
+<td>当前质押比例 4.55%</td>
+<td>§2.1/§2.2</td>
+</tr>
+<tr>
+<td>审计意见=标准无保留</td>
+<td>✅通过</td>
+<td>近1年无审计异常关键词命中→推定标准无保留（扫描485条公告，覆盖自2023-07-12）</td>
+<td>§2.1裁决#7</td>
+</tr>
+<tr>
+<td>近3年无涉财务真实性监管函</td>
+<td>✅通过</td>
+<td>3年窗口无监管函类关键词命中→推定通过（扫描485条公告，覆盖自2023-07-12）</td>
+<td>§2.2裁决#7</td>
+</tr>
+<tr>
+<td>无财务造假/立案调查记录</td>
+<td>✅通过</td>
+<td>无造假类关键词命中→推定通过</td>
+<td>§2.1裁决#7</td>
+</tr>
+<tr>
+<td>重大诉讼提示（命中不直接否决，报告P1预警）</td>
+<td>✅通过</td>
+<td>近1年无重大诉讼/仲裁公告</td>
+<td>§2.1裁决#7</td>
+</tr>
+<tr>
+<td>纯概念股量化判定</td>
+<td>✅通过</td>
+<td>盈利结构不符合概念股特征（近3年净利并非全负）</td>
+<td>§2.1裁决#7</td>
+</tr>
+</tbody>
+</table>
+<h2>三、股息组合视角（§2.2 通用门槛 + 分类财务门槛）</h2>
+<p><strong>通用门槛（§2.2，全部满足才进候选池）</strong></p>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>判定</th>
+<th>详情</th>
+<th>规则来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>市值≥300亿</td>
+<td>✅通过</td>
+<td>总市值 7981亿</td>
+<td>§2.2通用</td>
+</tr>
+<tr>
+<td>近20日日均成交额&gt;1亿</td>
+<td>✅通过</td>
+<td>40.43亿/日</td>
+<td>§2.2通用</td>
+</tr>
+<tr>
+<td>连续分红≥5年</td>
+<td>✅通过</td>
+<td>连续分红 10 年</td>
+<td>§2.2通用</td>
+</tr>
+<tr>
+<td>派现比例近3年均值≥30%</td>
+<td>❌不满足</td>
+<td>22.08%（每股现金分红(税前)/当年EPS（v4.2.0自动化口径））</td>
+<td>§2.2通用·裁决自动化</td>
+</tr>
+<tr>
+<td>股息率≥max(1.5×10年国债, 3%)</td>
+<td>❌不满足</td>
+<td>股息率 0.41%（口径：最近年度分红记录（非TTM，口径标注）） vs 门槛 3.00%（10年国债 1.74%）</td>
+<td>§2.2通用</td>
+</tr>
+<tr>
+<td>派息率&lt;80%</td>
+<td>✅通过</td>
+<td>最新年度 9.67%</td>
+<td>§2.2通用·裁决自动化</td>
+</tr>
+<tr>
+<td>合规三项（审计/质押/监管）</td>
+<td>✅通过</td>
+<td>由一票否决检查表自动判定（推定口径见该表）</td>
+<td>§2.2通用</td>
+</tr>
+</tbody>
+</table>
+<p><strong>分类财务门槛</strong>（行业'汽车制造业'自动归类：关键词命中；能力圈=core）</p>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>判定</th>
+<th>详情</th>
+<th>规则来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[C类·稳定消费/公用事业/制造（消费、家电、水电、交运、运营商）] ROE近3年均值≥12%</td>
+<td>✅通过</td>
+<td>ROE近3年均值 18.87%</td>
+<td>§2.2分类</td>
+</tr>
+<tr>
+<td>净利润近3年至少3年为正</td>
+<td>✅通过</td>
+<td>近3年为正 3 年</td>
+<td>§2.2分类</td>
+</tr>
+<tr>
+<td>净利润同比降幅&lt;20%</td>
+<td>❌不满足</td>
+<td>最新净利同比 <span class="down">-20.38%</span></td>
+<td>§2.2分类·C类子条件</td>
+</tr>
+<tr>
+<td>分红趋势</td>
+<td>❌不满足</td>
+<td>近3年每股分红出现递减：[3.098, 3.974, 0.358]</td>
+<td>§2.2分类·自动化</td>
+</tr>
+<tr>
+<td>资产负债率≤60%</td>
+<td>❌不满足</td>
+<td>70.7%</td>
+<td>§2.2分类</td>
+</tr>
+<tr>
+<td>收现比≥90%</td>
+<td>✅通过</td>
+<td>102.15%（新浪年报口径）</td>
+<td>§2.2分类·自动化</td>
+</tr>
+<tr>
+<td>净现比≥80%</td>
+<td>✅通过</td>
+<td>175.16%（新浪年报口径）</td>
+<td>§2.2分类·自动化</td>
+</tr>
+</tbody>
+</table>
+<p><strong>估值买入标准（三选一）</strong></p>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>判定</th>
+<th>详情</th>
+<th>规则来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PE≤行业均值 且 历史30%分位以下</td>
+<td>⚠️数据缺失</td>
+<td>PE 23.640291655414533（分位 13.69%，窗口近10年（二级源自算：新浪价格×年报EPS/BPS阶梯，静态近似口径））；行业均值PE缺失，无法完整判定</td>
+<td>§2.2</td>
+</tr>
+<tr>
+<td>PB≤2.5 且 历史30%分位以下</td>
+<td>❌不满足</td>
+<td>PB 3.2407698772031797；分位 34.76%（窗口近10年（二级源自算：新浪价格×年报EPS/BPS阶梯，静态近似口径））</td>
+<td>§2.2</td>
+</tr>
+<tr>
+<td>股息率≥2×10年国债</td>
+<td>❌不满足</td>
+<td>0.41%（口径：最近年度分红记录（非TTM，口径标注）） vs 门槛 3.48%</td>
+<td>§2.2</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>未满足/无法完整判定估值买入标准</p>
+<p>加分条件：加分条件5项为定性判断，不参与自动判定；核心池/观察池归类以门槛+估值自动结果为准</p>
+</blockquote>
+<p><strong>股息组合结论</strong>：排除（存在门槛FAIL项）</p>
+<h2>四、择时组合视角（§2.3 备选池 + §2.4 门槛与评分）</h2>
+<p><strong>备选池入池标准（§2.3）</strong></p>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>判定</th>
+<th>详情</th>
+<th>规则来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>市值≥200亿</td>
+<td>✅通过</td>
+<td>总市值 7981亿</td>
+<td>§2.3</td>
+</tr>
+<tr>
+<td>近5日日均成交额&gt;1亿</td>
+<td>✅通过</td>
+<td>51.17亿/日</td>
+<td>§2.3</td>
+</tr>
+<tr>
+<td>ROE近3年均值≥8%</td>
+<td>✅通过</td>
+<td>18.87%</td>
+<td>§2.3</td>
+</tr>
+<tr>
+<td>净利润近3年≥2年为正</td>
+<td>✅通过</td>
+<td>为正 3 年</td>
+<td>§2.3</td>
+</tr>
+<tr>
+<td>大股东质押率&lt;30%</td>
+<td>✅通过</td>
+<td>4.55%</td>
+<td>§2.3</td>
+</tr>
+<tr>
+<td>理解度（备选池成员资格）</td>
+<td>✅通过</td>
+<td>已在备选池 watchlist（入池即视为完成研究笔记义务，v4.2.0裁决）</td>
+<td>§2.3裁决自动化</td>
+</tr>
+<tr>
+<td>审计/监管无重大问题</td>
+<td>✅通过</td>
+<td>由一票否决公告扫描自动判定（推定口径见该表）</td>
+<td>§2.3</td>
+</tr>
+</tbody>
+</table>
+<p><strong>买入门槛条件（§2.4，全部满足）</strong></p>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>判定</th>
+<th>详情</th>
+<th>规则来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>标的在备选池内</td>
+<td>✅通过</td>
+<td>watchlist.json 自动核对</td>
+<td>§2.4裁决自动化</td>
+</tr>
+<tr>
+<td>估值三选一(PE分位≤30%且PE≤30 / PB≤2.5 / 股息率≥4%)</td>
+<td>✅通过</td>
+<td>PE 23.640291655414533/分位 13.69% → 满足①；PB 3.2407698772031797 → 不满足②；股息率 0.41% → 不满足③</td>
+<td>§2.4</td>
+</tr>
+<tr>
+<td>较1年内高点回撤≥25%</td>
+<td>❌不满足</td>
+<td>23.91%</td>
+<td>§2.4</td>
+</tr>
+<tr>
+<td>最近财报营收或净利同比不为负</td>
+<td>❌不满足</td>
+<td>营收同比 —，净利同比 <span class="down">-20.38%</span>（'业绩拐点预期'属决策卡片环节判断，此处按数据判FAIL）</td>
+<td>§2.4</td>
+</tr>
+<tr>
+<td>市场非C区</td>
+<td>✅通过</td>
+<td>当前判定 B_high</td>
+<td>§2.4</td>
+</tr>
+</tbody>
+</table>
+<p><strong>评分表（v4.2.0全自动口径，每项1分）</strong></p>
+<table>
+<thead>
+<tr>
+<th>评分项</th>
+<th>得分</th>
+<th>口径说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>技术底部</td>
+<td>1</td>
+<td>RSI超卖近20日=True，MACD零下金叉近15日=True（裁决#5共振口径）</td>
+</tr>
+<tr>
+<td>右侧确认</td>
+<td>0</td>
+<td>个股收盘站上60日线连续0天（≥3天记1分，行业指数不可得以个股替代，偏严）</td>
+</tr>
+<tr>
+<td>政策催化</td>
+<td>0</td>
+<td>不参与自动评分（不可编程，裁决口径；映射阈值不变=偏保守）</td>
+</tr>
+<tr>
+<td>资金信号</td>
+<td>0</td>
+<td>融资余额 13355686661.0 vs 10日前 13723246072.0（交易所两融明细；北向数据已停发按裁决删除，采用原文并列选项'融资余额上升'）</td>
+</tr>
+<tr>
+<td>机构预期</td>
+<td>1</td>
+<td>一致预测EPS CAGR 22.58%（同花顺，裁决口径：≥15%记1分）</td>
+</tr>
+<tr>
+<td>预期差</td>
+<td>0</td>
+<td>不参与自动评分（主观判断，仅决策卡片环节使用）</td>
+</tr>
+</tbody>
+</table>
+<p>自动评分：<strong>2 分</strong>（自动口径满分4分；政策催化/预期差不参与自动评分，映射阈值不变=偏保守）</p>
+<blockquote>
+<p>评分≥3且门槛全过时：决策卡片定稿+24小时冷静期后方可首仓30%（§2.6/§3.2）</p>
+</blockquote>
+<p><strong>择时组合结论</strong>：不满足择时买入条件（存在FAIL项）</p>
+<h2>五、估值分析（valuation_model.yaml v4.3.0 多锚点体系）</h2>
+<p><strong>价格区间分级</strong>：减持区（触发估值卖出条件：股息率&lt;10年国债（该触发为股息组合卖出规则，对非收息持仓仅供参考））</p>
+<blockquote>
+<p>估值锚缺失时按体系默认相对估值口径分级（valuation_model.yaml v4.2.0正式规则）</p>
+</blockquote>
+<p>放量滞涨卖出信号（裁决#12）：未触发（近5日内[成交额≥1.5×20日均额 且 涨跌幅≤0.5% 且 距60日高点&lt;5%]（v4.2.0裁决#12））</p>
+<p>行业均值PE：—（行业对比数据缺失）</p>
+<p><strong>行业估值方法集</strong>：成长制造/科技（新能源车/消费电子/半导体/软件）（G_growth）</p>
+<blockquote>
+<p>选型依据：成长股低分红使股息锚失效，DDM系统性低估；以PE分位为主、PEG校准成长溢价</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>估值方法</th>
+<th>权重</th>
+<th>适用性</th>
+<th>合理区间(元)</th>
+<th>减持阈(元)</th>
+<th>参数与口径</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PE历史分位法（核心锚）</td>
+<td>40%</td>
+<td>✅ 可用</td>
+<td>[97.69, 143.38]</td>
+<td>178.45</td>
+<td>EPS=3.703；PE分位值 p30=26.38/p50=38.72/p70=48.19（窗口：近10年（二级源自算：新浪价格×年报EPS/BPS阶梯，静态近似口径））</td>
+</tr>
+<tr>
+<td>PEG法（辅助锚）</td>
+<td>35%</td>
+<td>✅ 可用</td>
+<td>[66.88, 83.6]</td>
+<td>100.32</td>
+<td>EPS=3.703；一致预测CAGR=22.58%；PEG系数[0.8,1.0]，减持1.2；PE上限30（§2.4）</td>
+</tr>
+<tr>
+<td>PB历史分位法（验证锚）</td>
+<td>25%</td>
+<td>✅ 可用</td>
+<td>[76.44, 117.5]</td>
+<td>168.83</td>
+<td>BPS=27.0121；PB分位值 p30=2.83/p50=4.35/p70=6.25（窗口：近10年（二级源自算：新浪价格×年报EPS/BPS阶梯，静态近似口径））</td>
+</tr>
+</tbody>
+</table>
+<p><strong>测算过程</strong></p>
+<ul>
+<li><strong>PE历史分位法</strong>：区间=[3.703×26.38, 3.703×38.72]；减持=3.703×48.19</li>
+<li><strong>PEG法</strong>：合理PE=[18.1, 22.6]→区间=EPS×PE；减持PE=27.1</li>
+<li><strong>PB历史分位法</strong>：区间=[27.0121×2.83, 27.0121×4.35]；减持=27.0121×6.25</li>
+</ul>
+<p>⚠️ <strong>方法间偏差 46.42% 超过30%阈值，不输出加权综合区间</strong></p>
+<blockquote>
+<p>方法间偏差 46.42% &gt; 30.00%阈值，不强行加权——偏差主要来自 PE历史分位法（偏高）与 PEG法（偏低），通常意味着市场定价逻辑与其中一类锚不匹配（如成长转价值、周期位置分歧），请分别参考各方法区间并结合研究笔记判断</p>
+<p>说明：多锚区间仅用于研究参考与研究笔记估值锚的交叉验证，不改变§2.2/§2.4买卖门槛判定；研究笔记已定义估值锚的标的以研究笔记优先（v4.3.0裁决#13）。</p>
+</blockquote>
+<h2>六、风控参数测算（risk_control.yaml，仅当具备入选资格时适用）</h2>
+<ul>
+<li>能力圈：核心能力圈：单票可至组合上限</li>
+<li>单票仓位上限：股息组合 15.00% ｜ 择时组合 25.00%</li>
+<li>建仓节奏：首仓30% → 二仓30% → 三仓40%（触发条件见config §3.1/§3.2）</li>
+<li>止损参考价：<span class="down">-10%</span>减仓50% → 78.79；<span class="down">-15%</span>无条件清仓 → 74.41（以首仓成本计，此处按现价演示口径）</li>
+<li>止盈参考价：<span class="up">+20%</span>减持1/3 → 105.05；<span class="up">+40%</span>再减1/3 → 122.56（另有PE70%分位触发、放量滞涨信号（裁决#12量化）与'高点回落≥8%清仓'移动止盈（§3.2））</li>
+<li>时间止损：3个月未盈利减仓50%；6个月清仓；满12个月强制重评（§3.2）</li>
+</ul>
+<h2>七、核心投资逻辑与风险点</h2>
+<p><strong>数据要点（供决策卡片'买入逻辑'与'反向论证'参考，非结论）</strong>
+- 盈利能力：ROE近3年均值 18.87%，净利润最新同比 <span class="down">-20.38%</span>
+- 估值位置：PE分位 13.69%，价格区间判定 → 减持区（触发估值卖出条件：股息率&lt;10年国债（该触发为股息组合卖出规则，对非收息持仓仅供参考））
+- 分红记录：连续 10 年
+- 最新公告（近30天）：H股公告（股份发行人及根据《上市规则》第十九B章上市的香港预；2026年6月产销快报；H股公告（二零二五年末期股息-股息货币选择表格）；H股公告（截至二零二五年十二月三十一日止年度之末期股息（更新；自愿公告</p>
+<blockquote>
+<p>依据§4.4外部观点加工协议：knowledge/reference 中的第三方研报观点仅可作背景论据，任何外部观点必须经加工后才能进入决策流程，不允许'刚看完就买'。</p>
+</blockquote>
+<h3>四类风险矩阵（宏观 / 行业 / 公司 / 估值）</h3>
+<p><strong>宏观风险</strong>
+- [P2] 市场处于B偏高：股息组合暂停买入、择时不开新仓（§1.4仓位映射）</p>
+<p><strong>行业风险</strong>
+- [P3] 行业均值PE数据缺失，'PE≤行业均值'条款无法完整判定</p>
+<p><strong>公司风险</strong>
+- [P2] 最新净利润同比 <span class="down">-20.38%</span>，降幅超20%（C类分红股该项直接不达标）
+- [P3] 审计/监管/造假三项为公告标题扫描推定口径（覆盖自2023-07-12，485条），关键决策前建议复核年报审计报告原文</p>
+<p><strong>估值风险</strong>
+- [P1] 已触发估值卖出条件：减持区（触发估值卖出条件：股息率&lt;10年国债（该触发为股息组合卖出规则，对非收息持仓仅供参考））</p>
+<h2>八、结论</h2>
+<p><strong>综合结论</strong>：股息组合：排除（存在门槛FAIL项） ｜ 择时组合：不满足择时买入条件（存在FAIL项）</p>
+<p>市场状态背景：B偏高</p>
+<h3>推定判定与数据口径说明（v4.2.0全自动化）</h3>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>判定</th>
+<th>详情</th>
+<th>规则来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>审计意见=标准无保留</td>
+<td>✅通过</td>
+<td>近1年无审计异常关键词命中→推定标准无保留（扫描485条公告，覆盖自2023-07-12）</td>
+<td>§2.1裁决#7</td>
+</tr>
+<tr>
+<td>近3年无涉财务真实性监管函</td>
+<td>✅通过</td>
+<td>3年窗口无监管函类关键词命中→推定通过（扫描485条公告，覆盖自2023-07-12）</td>
+<td>§2.2裁决#7</td>
+</tr>
+<tr>
+<td>无财务造假/立案调查记录</td>
+<td>✅通过</td>
+<td>无造假类关键词命中→推定通过</td>
+<td>§2.1裁决#7</td>
+</tr>
+<tr>
+<td>派现比例近3年均值≥30%</td>
+<td>❌不满足</td>
+<td>22.08%（每股现金分红(税前)/当年EPS（v4.2.0自动化口径））</td>
+<td>§2.2通用·裁决自动化</td>
+</tr>
+<tr>
+<td>股息率≥max(1.5×10年国债, 3%)</td>
+<td>❌不满足</td>
+<td>股息率 0.41%（口径：最近年度分红记录（非TTM，口径标注）） vs 门槛 3.00%（10年国债 1.74%）</td>
+<td>§2.2通用</td>
+</tr>
+<tr>
+<td>合规三项（审计/质押/监管）</td>
+<td>✅通过</td>
+<td>由一票否决检查表自动判定（推定口径见该表）</td>
+<td>§2.2通用</td>
+</tr>
+<tr>
+<td>收现比≥90%</td>
+<td>✅通过</td>
+<td>102.15%（新浪年报口径）</td>
+<td>§2.2分类·自动化</td>
+</tr>
+<tr>
+<td>净现比≥80%</td>
+<td>✅通过</td>
+<td>175.16%（新浪年报口径）</td>
+<td>§2.2分类·自动化</td>
+</tr>
+<tr>
+<td>审计/监管无重大问题</td>
+<td>✅通过</td>
+<td>由一票否决公告扫描自动判定（推定口径见该表）</td>
+<td>§2.3</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>全部判定为程序自动执行（v4.2.0）；上表列出其中依赖'推定口径'或存在数据缺失的项，供复核数据源。</p>
+</blockquote>
+<h3>逻辑自检结果</h3>
+<p>✅ 自检通过：分析结论与 config 铁则一致性校验、结论自洽性校验、数值合法性校验、边界口径落实校验全部通过。</p>
+<hr />
+<p><strong>免责声明</strong>：本报告由个人投资研究工作台自动生成，所有打分与测算严格执行 config/ 铁则层规则，
+不代表任何买卖建议。数据来自公开接口，可能存在延迟或误差，关键决策前必须人工复核原始公告。</p>
+</div>
+<div class="footer">投资研究工作台 · 个股分析报告 比亚迪（002594）20260707 · 生成于 2026-07-07 15:32 · 仅研究分析，不构成投资建议</div>
+<div class="pdf-footer">个股分析报告 比亚迪（002594）20260707 ｜ 生成日期 2026-07-07 15:32 ｜ 投资研究工作台 · 仅研究分析不构成投资建议</div>
+</body>
+</html>
