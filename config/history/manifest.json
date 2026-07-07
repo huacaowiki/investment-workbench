@@ -21,6 +21,17 @@
         "valuation_model.yaml",
         "risk_control.yaml"
       ]
+    },
+    {
+      "version_id": "v003_20260707_143728",
+      "date": "2026-07-07 14:37:28",
+      "note": "验证Git自动同步机制",
+      "files": [
+        "investment_system.yaml",
+        "stock_selection.yaml",
+        "valuation_model.yaml",
+        "risk_control.yaml"
+      ]
     }
   ]
 }

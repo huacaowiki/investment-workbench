@@ -1,0 +1,263 @@
+# =============================================================================
+# stock_selection.yaml — 量化选股规则（铁则层）
+# 来源：《花茶个人投资体系 v4.1》§2.1 / §2.2 / §2.3 / §2.4 / §2.5
+# 说明：源文档的股息组合选股为"门槛制（pass/fail）+加分条件"，非加权打分制；
+#       择时组合为"门槛制+6项评分制"。本文件如实结构化，未新增任何权重体系。
+# =============================================================================
+
+meta:
+  version: "4.2.0"
+  source_document: "花茶个人投资体系v4.1.md"
+  structured_date: "2026-07-06"
+  changelog_4_2_0: >
+    2026-07-06 用户授权裁决：#4分位窗口固化近10年（乐咕→自算→百度三级源）；
+    #5技术底部替代量化口径（RSI+MACD共振）；#6评分冲突采严格口径（1-2分仅观察）；
+    #7概念股/财务疑点/审计/监管函全部量化自动化（公告关键词扫描+盈利结构判定）；
+    择时评分'资金信号'删除北向依赖改用融资余额（原文并列选项）；
+    '政策催化''预期差'移出自动评分（恒不计分，映射阈值不变=偏保守）；
+    机构预期改用同花顺一致预测EPS计算CAGR；新增备选池 watchlist.json 机制
+
+# -----------------------------------------------------------------------------
+# 一票否决项（任一命中→直接排除，两组合共用）
+# 来源：§2.1 完全排除（红线）+ 能力圈约束
+# -----------------------------------------------------------------------------
+veto_rules:
+  market_veto:
+    - id: "st_stock"
+      rule: "ST股 → 排除"
+    - id: "delisting_risk"
+      rule: "退市风险股 → 排除"
+    - id: "pure_concept"
+      rule: "纯概念股 → 排除"
+    - id: "outside_circle"
+      rule: "能力圈外行业（创新药、农业、军工、看不懂的行业）→ 禁止建仓"
+      source: "§2.1"
+  financial_veto:
+    - id: "financial_doubt"
+      rule: "财务数据有疑点 → 排除"
+      auto_rule: "近3年公告标题扫描命中[立案调查|财务造假|虚假记载|重大会计差错] → FAIL；无命中→推定通过（v4.2.0裁决#7）"
+    - id: "pledge_or_reduction"
+      rule: "大股东频繁减持 / 质押比例过高（质押率≥30%）→ 排除"
+      threshold: {major_shareholder_pledge_ratio_max: 0.30}
+      source: "§2.1 + §2.2通用门槛'大股东质押率<30%'"
+    - id: "audit_abnormal"
+      rule: "审计意见异常（非标准无保留）→ 排除"
+      auto_rule: "近1年公告标题扫描命中[保留意见|无法表示意见|否定意见|带强调事项段] → FAIL；无命中→推定标准无保留（v4.2.0裁决#7，推定口径在报告标注）"
+    - id: "major_lawsuit"
+      rule: "重大诉讼未决 → 排除"
+      auto_rule: "近1年公告标题扫描命中[重大诉讼|重大仲裁] → 预警提示（诉讼影响需结合金额，命中时报告P1预警）"
+    - id: "regulatory_letter"
+      rule: "近3年有涉及财务真实性的监管函 → 排除"
+      auto_rule: "近3年公告标题扫描命中[监管函|警示函|监管工作函|问询函(年报)] → FAIL（涉财务类）；无命中→推定通过"
+      source: "§2.2通用门槛"
+    - id: "pure_concept_quant"
+      rule: "纯概念股量化判定（v4.2.0裁决#7新增自动口径）"
+      auto_rule: "近3年净利润全部为负 且 市值>200亿 → 概念股嫌疑FAIL"
+  source: "v4.1 §2.1 / §2.2；auto_rule为v4.2.0用户授权的自动化口径"
+
+# -----------------------------------------------------------------------------
+# 股息组合选股标准（来源：§2.2）
+# 结构：通用门槛（全部满足才进候选池）→ 分类财务门槛 → 加分条件 → 估值买入标准
+# -----------------------------------------------------------------------------
+dividend_portfolio:
+  universal_thresholds:   # 通用门槛，全部满足才进入候选池
+    - {id: market_cap,        metric: "总市值",              op: ">=", value: 30000000000, unit: "元", desc: "市值≥300亿"}
+    - {id: avg_turnover_20d,  metric: "近20日日均成交额",     op: ">",  value: 100000000,  unit: "元", desc: "日均成交额>1亿"}
+    - {id: audit_opinion,     metric: "审计意见",            op: "==", value: "标准无保留"}
+    - {id: pledge_ratio,      metric: "大股东质押率",         op: "<",  value: 0.30}
+    - {id: regulatory,        metric: "近3年涉财务真实性监管函", op: "==", value: 0}
+    - {id: dividend_years,    metric: "连续分红年数",         op: ">=", value: 5, desc: "≥5年不间断"}
+    - id: payout_ratio_3y
+      metric: "派现比例（近3年均值）"
+      op: ">="
+      value: 0.30
+      auto_rule: "v4.2.0自动化：年度派现比例 = 每股现金分红(税前,巨潮/东财分红记录) / 当年每股收益(新浪年报)；取近3年均值"
+    - id: dividend_yield
+      metric: "当期股息率"
+      rule: "≥ 1.5倍10年国债收益率，且绝对值≥3%"
+      formula: "dividend_yield >= max(1.5 * cn10y_yield, 0.03)"
+      note: "绝对底线3%防止国债收益率极端下行时门槛失效"
+    - id: payout_ratio_cap
+      metric: "派息率"
+      op: "<"
+      value: 0.80
+      desc: "分红留有余力"
+      auto_rule: "v4.2.0自动化：口径同payout_ratio_3y，取最近年度值"
+
+  # 分类财务门槛：按行业归属三选一适用
+  category_thresholds:
+    A_financial:
+      name: "A类·金融（银行、保险）"
+      examples: ["招商银行", "工商银行", "建设银行", "中国平安"]
+      rules:
+        - {metric: "ROE近3年均值",     op: ">=", value: 0.08, note: "行业净息差系统性下行，10%已是头部水平"}
+        - {metric: "不良贷款率",       op: "<=", value: 0.015}
+        - {metric: "拨备覆盖率",       op: ">=", value: 2.00}
+        - {metric: "资本充足率",       op: ">=", value: "监管要求"}
+        - {metric: "净利润",          rule: "近3年均为正"}
+        - {metric: "分红趋势",        rule: "近3年不间断（允许金额波动）"}
+      not_applicable: ["收现比", "净现比", "资产负债率"]   # 金融行业无参考价值
+    B_cyclical:
+      name: "B类·周期资源（煤炭、石化、有色）"
+      examples: ["中国神华", "陕西煤业", "中国石化"]
+      rules:
+        - {metric: "ROE近3年均值",     op: ">=", value: 0.10}
+        - {metric: "净利润",          rule: "近3年中至少2年为正（允许周期底部偶发性下滑）"}
+        - {metric: "收现比",          op: ">=", value: 0.80}
+        - {metric: "净现比",          op: ">=", value: 0.70}
+        - {metric: "资产负债率",       op: "<=", value: 0.65}
+        - {metric: "分红趋势",        rule: "近5年不间断（允许金额随周期波动），核心看分红意愿连续性"}
+    C_stable:
+      name: "C类·稳定消费/公用事业/制造（消费、家电、水电、交运、运营商）"
+      examples: ["伊利股份", "美的集团", "长江电力", "大秦铁路", "中国移动"]
+      rules:
+        - {metric: "ROE扣非近3年均值", op: ">=", value: 0.12}
+        - {metric: "净利润",          rule: "近3年均为正，且同比降幅<20%"}
+        - {metric: "收现比",          op: ">=", value: 0.90}
+        - {metric: "净现比",          op: ">=", value: 0.80}
+        - {metric: "资产负债率",       op: "<=", value: 0.60}
+        - {metric: "分红趋势",        rule: "近3年不间断且非递减"}
+
+  bonus_conditions:   # 加分条件：满足≥2条优先入选（计数制，非权重制）
+    threshold: 2
+    items:
+      - "行业成熟期，需求稳定"
+      - "行业长期增速≥3%"
+      - "龙头/准龙头（市占率行业前三）"
+      - "具备牌照/品牌/规模/成本壁垒"
+      - "技术颠覆风险低"
+
+  valuation_buy_criteria:   # 估值买入标准：满足≥1条（详见 valuation_model.yaml）
+    threshold: 1
+    items:
+      - id: pe_criteria
+        rule: "PE ≤ 行业均值 且 处于自身历史30%分位以下"
+        percentile_window: "近10年"   # v4.2.0裁决#4确认：近10年；数据源三级链见 valuation_model.yaml
+      - id: pb_criteria
+        rule: "PB ≤ 2.5 且 处于自身历史30%分位以下（周期股优先看PB）"
+      - id: yield_criteria
+        rule: "当期股息率 ≥ 2倍10年期国债收益率"
+  source: "v4.1 §2.2"
+
+# -----------------------------------------------------------------------------
+# 择时组合：备选池 + 门槛 + 评分（来源：§2.3 / §2.4）
+# -----------------------------------------------------------------------------
+timing_portfolio:
+  pool_entry:   # 备选池入池标准（全部满足）
+    rules:
+      - id: understanding
+        metric: "理解度"
+        rule: "能说清商业模式、竞争优势、主要风险、估值锚（须有研究笔记，模板见附录A）"
+        auto_rule: "v4.2.0：以备选池文件 data/processed/watchlist.json 成员资格自动判定——用户将标的加入watchlist即视为已完成理解度研究（run.py watchlist add <代码> 时提示研究笔记义务）"
+      - {id: market_cap,    metric: "总市值",          op: ">=", value: 20000000000, unit: "元", desc: "市值≥200亿"}
+      - {id: turnover_5d,   metric: "近5日日均成交额",  op: ">",  value: 100000000, unit: "元"}
+      - {id: roe_3y,        metric: "ROE近3年均值",    op: ">=", value: 0.08}
+      - {id: profit,        metric: "净利润",          rule: "近3年中至少2年为正（允许困境反转标的因非经常性/周期性原因偶发亏损）"}
+      - {id: pledge,        metric: "大股东质押率",     op: "<", value: 0.30}
+      - {id: compliance,    metric: "审计/监管",       rule: "无重大问题"}
+    maintenance:
+      pool_size: [30, 50]
+      industry_coverage_min: 5
+      review_frequency: "每季度审核一次，不达标移出，新标的经研究后补入"
+      research_note_required: true
+    source: "v4.1 §2.3"
+
+  gate_conditions:   # 门槛条件（全部满足才可买入）
+    rules:
+      - id: in_pool
+        rule: "标的必须在备选池内"
+        auto_rule: "v4.2.0：自动核对 data/processed/watchlist.json；不在池内→FAIL并提示先入池"
+      - id: valuation
+        rule: "至少满足1条：① PE分位≤历史30% 且 PE≤30；② PB≤2.5；③ 股息率≥4%"
+      - {id: drawdown,   rule: "较1年内高点回撤≥25%", threshold: 0.25}
+      - {id: fundamental, rule: "最近一期财报营收或净利润同比不为负，或有明确业绩拐点预期"}
+      - {id: market_state, rule: "当前市场状态非C区"}
+    source: "v4.1 §2.4"
+
+  scoring:   # 评分条件：每条1分，决定优先级和仓位大小（v4.2.0全自动化口径）
+    items:
+      - id: tech_bottom
+        name: "技术底部"
+        desc: "同花顺自编指标≥2个共振出现底部信号"
+        score: 1
+        auto_rule: "替代量化口径（v4.2.0裁决#5，自编指标不可得）：日线RSI(14)<30出现于近20日 且 MACD(12,26,9)零轴下方金叉出现于近15日 → 共振记1分"
+      - id: right_side
+        name: "右侧确认"
+        desc: "周线MACD/RSI底背离，或行业指数站上60日线≥3日"
+        score: 1
+        auto_rule: "替代量化口径：个股收盘站上60日线≥3个交易日（行业指数序列不可得，以个股自身替代，偏严）"
+      - id: policy
+        name: "政策催化"
+        desc: "所属行业有国务院/部委级别明确利好"
+        score: 1
+        auto_rule: "不可编程 → 自动评分恒不计分（v4.2.0裁决：移出自动评分，映射阈值不变=偏保守）"
+        automated: false
+      - id: capital_flow
+        name: "资金信号"
+        desc: "融资余额近期上升（v4.2.0：北向个股数据已停发，按用户指示删除北向依赖，保留原文并列选项'融资余额'）"
+        score: 1
+        auto_rule: "沪深交易所两融明细：当前融资余额 > 10个交易日前融资余额 → 记1分"
+      - id: institution
+        name: "机构预期"
+        desc: "一致预期未来2年净利润CAGR≥15%（原文'上调多于下调'子条件无公开数据，v4.2.0删除该子条件）"
+        score: 1
+        auto_rule: "同花顺一致预测EPS：(最远预测年均值/最近实际EPS)^(1/年数)-1 ≥ 15% → 记1分"
+      - id: expectation_gap
+        name: "预期差"
+        desc: "存在市场未充分定价的正向因素（需在决策卡片中写明）"
+        score: 1
+        auto_rule: "本质为主观判断 → 自动评分恒不计分；仅在决策卡片环节由用户自行加分"
+        automated: false
+    auto_score_note: "自动评分满分4分（技术底部/右侧确认/资金信号/机构预期）；政策催化与预期差不计入自动分，映射阈值不变，整体口径偏保守"
+    score_to_position:   # 评分→仓位映射（v4.2.0裁决#6：采纳§3.2严格口径，消除冲突）
+      - {score_range: [5, 6], position: "满额仓位（目标的100%）"}
+      - {score_range: [3, 4], position: "半额仓位（目标的50%-70%）"}
+      - {score_range: [1, 2], position: "仅观察，不建仓（原'轻仓试探'与§3.2'首仓需评分≥3'冲突，2026-07-06裁决采严格口径）"}
+      - {score_range: [0, 0], position: "不买"}
+    source: "v4.1 §2.4；自动化口径为v4.2.0用户授权裁决"
+
+  etf_rules:   # ETF买入规则（不走个股筛选标准，单独规则）
+    entry_conditions:   # 全部满足
+      - {id: industry,    rule: "跟踪行业属于能力圈范围内（核心或卫星）"}
+      - {id: logic,       rule: "有明确的行业级催化逻辑（政策/产业趋势/周期反转）", manual: true}
+      - {id: fund_size,   metric: "ETF规模", op: ">=", value: 1000000000, unit: "元"}
+      - {id: turnover,    metric: "近5日日均成交额", op: ">=", value: 50000000, unit: "元"}
+      - {id: tracking_error, metric: "近1年跟踪误差", op: "<=", value: 0.02}
+    position_caps:
+      single_etf_cap: 0.15       # 占择时组合
+      total_etf_cap: 0.30        # 全部ETF合计占择时组合
+    decision_card_required: true  # 核心假设改为行业级假设，止盈止损按择时规则执行
+    source: "v4.1 §2.5"
+
+# -----------------------------------------------------------------------------
+# 入选阈值汇总（核心池/观察池/排除）
+# 说明：源文档未定义"核心池/观察池"术语，按体系原意映射如下，不改变任何规则实质
+# -----------------------------------------------------------------------------
+pool_thresholds:
+  dividend:
+    core_pool: "通用门槛全部满足 + 对应分类财务门槛全部满足 + 加分条件≥2条"
+    watch_pool: "通用门槛与分类门槛全部满足，但加分条件<2条（可入候选，不优先）"
+    excluded: "任一门槛不满足，或命中一票否决项"
+  timing:
+    core_pool: "备选池标准全满足 + 门槛条件全满足 + 评分≥3分"
+    watch_pool: "备选池标准全满足，门槛条件未全满足或评分1-2分"
+    excluded: "备选池标准不满足，或命中一票否决项，或市场处于C区"
+  note: "'核心池/观察池'为工程化命名映射，规则实质完全来自§2.2-2.4，无新增标准"
+
+confirmed_decisions:   # 原 pending_confirmation，2026-07-06 用户授权全部裁决固化
+  - id: 4
+    item: "PE/PB历史分位数窗口"
+    decision: "确认近10年（上市不足10年取全部历史）；数据源三级链：乐咕全历史→新浪价格+年报EPS/BPS自算（阶梯近似口径）→百度约2年序列（末级兜底，报告标注）"
+    decided: "2026-07-06"
+  - id: 5
+    item: "技术底部信号自动化"
+    decision: "同花顺自编指标不可得，固化替代量化口径：日线RSI(14)<30近20日出现 且 MACD零轴下方金叉近15日出现 → 共振记1分"
+    decided: "2026-07-06"
+  - id: 6
+    item: "评分1-2分轻仓冲突（原文真实冲突）"
+    decision: "采纳§3.2严格口径：评分1-2分仅观察不建仓；§2.4映射同步修订"
+    decided: "2026-07-06"
+  - id: 7
+    item: "纯概念股/财务疑点/审计/监管函量化"
+    decision: "全部转为公告标题关键词扫描+盈利结构自动判定（详见veto_rules各auto_rule）；无命中即推定通过，推定口径在报告标注"
+    decided: "2026-07-06"
